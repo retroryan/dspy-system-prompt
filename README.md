@@ -7,7 +7,8 @@ The implementation features:
 - Manual control over the React (reason → act → observe) loop using DSPy
 - Activity management for execution control and metrics
 - Support for multiple LLM providers (Ollama, Claude, OpenAI, Gemini)
-- Tool sets for different domains (e-commerce, events, treasure hunt, productivity)
+- Tool sets for different domains (e-commerce, events, treasure hunt, productivity, weather)
+- Weather tool set currently uses [Open Meteo](https://open-meteo.com/) (shout out for the great API!) with MCP server integration coming soon
 
 ## Quick Start
 
@@ -48,6 +49,42 @@ DSPY_DEBUG=true poetry run python agentic_loop/demo_react_agent.py
 ## What is the Agentic Loop?
 
 The agentic loop in this project demonstrates a manually controlled implementation of the DSPy React pattern, where we explicitly separate the React, Extract, and Observe phases for maximum control over execution:
+
+### Flow Diagram
+
+```
+User Query
+    ↓
+┌─────────────────────────────────────┐
+│ React Phase (ReactAgent)            │
+│ - Uses dspy.Predict                 │
+│ - Returns: thought, tool_name, args │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│ External Controller                 │
+│ (demo_react_agent.py)               │
+│ - Execute selected tool             │
+│ - Add results to trajectory         │
+│ - Decide: continue or finish?       │
+└─────────────────────────────────────┘
+    ↓ (if tool_name != "finish")
+    ↑ (loop until "finish")
+    ↓ (when "finish" selected)
+┌─────────────────────────────────────┐
+│ Extract Phase (ReactExtract)        │
+│ - Uses dspy.ChainOfThought          │
+│ - Analyzes complete trajectory      │
+│ - Synthesizes final answer          │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│ Observe Phase                       │
+│ - Returns final observer output     │
+└─────────────────────────────────────┘
+    ↓
+Final Answer
+```
 
 ### React Phase (Tool Selection)
 The React agent uses `dspy.Predict` to reason about the user's request and available tools, then returns:
@@ -92,19 +129,36 @@ This architecture bridges the gap between LLM reasoning and production systems t
 
 ## Detailed Usage
 
+Each tool set comes with comprehensive test cases that demonstrate real-world usage scenarios. The demo runs these test cases to show how the React → Extract → Observe pattern works in practice.
+
+### Weather Tool Set (Recommended Starting Point)
+
+The weather tool set provides comprehensive weather information and is particularly good for demonstrating the agentic loop:
+
+```bash
+# Run weather tool set (default)
+poetry run python agentic_loop/demo_react_agent.py agriculture
+
+# Example interactions from test cases:
+# - "What's the current weather in Paris, France?"
+# - "Give me a 7-day forecast for New York City"
+# - "What was the weather like in London yesterday?"
+```
+
+Available tools:
+- `agricultural_weather`: Current weather conditions optimized for agriculture
+- `weather_forecast`: Multi-day weather forecasts  
+- `historical_weather`: Historical weather data
+
+**Note**: Currently uses [Open Meteo](https://open-meteo.com/) API directly. MCP server integration coming soon for enhanced capabilities.
+
 ### E-commerce Tool Set
 
-The e-commerce tool set provides tools for online shopping scenarios:
+The e-commerce tool set provides tools for online shopping scenarios with realistic test cases:
 
 ```bash
 # Run e-commerce demo
-poetry run python agentic_loop/demo_react_agent.py
-
-# Example interactions:
-# - "Search for laptops under $1000"
-# - "Add the first laptop to my cart"
-# - "Track order #12345"
-# - "Return the laptop from order #12345"
+poetry run python agentic_loop/demo_react_agent.py ecommerce
 ```
 
 Available tools:
@@ -117,16 +171,11 @@ Available tools:
 
 ### Events Tool Set
 
-The events tool set provides tools for event management:
+The events tool set provides tools for event management with comprehensive test scenarios:
 
 ```bash
 # Run with events tools
-poetry run python agentic_loop/demo_react_agent.py
-
-# Example interactions:
-# - "Find tech events in San Francisco"
-# - "Create a team meeting for next Monday at 2pm"
-# - "Cancel the event with ID EVT-123"
+poetry run python agentic_loop/demo_react_agent.py events
 ```
 
 Available tools:
@@ -163,22 +212,6 @@ ANTHROPIC_API_KEY=your-api-key-here
 ```bash
 DSPY_PROVIDER=openai
 OPENAI_API_KEY=your-api-key-here
-```
-
-## Testing
-
-### Unit Tests
-```bash
-# Test individual components
-poetry run pytest tests/test_phase3_manual_agent_loop.py -v
-poetry run pytest tests/test_phase4_activity_manager.py -v
-```
-
-### Integration Tests
-```bash
-# Test full workflows
-poetry run pytest integration_tests/test_simple_workflow.py -v
-poetry run pytest integration_tests/test_full_workflow.py -v
 ```
 
 ## Troubleshooting
