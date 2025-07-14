@@ -47,7 +47,7 @@ DSPY_DEBUG=true poetry run python agentic_loop/demo_react_agent.py
 
 ## What is the Agentic Loop?
 
-The agentic loop in this project demonstrates a manually controlled implementation of the DSPy React pattern, where we explicitly separate the React and Extract phases for maximum control over execution:
+The agentic loop in this project demonstrates a manually controlled implementation of the DSPy React pattern, where we explicitly separate the React, Extract, and Observe phases for maximum control over execution:
 
 ### React Phase (Tool Selection)
 The React agent uses `dspy.Predict` to reason about the user's request and available tools, then returns:
@@ -70,6 +70,9 @@ After the React loop completes, the Extract agent uses `dspy.ChainOfThought` to:
 - Synthesize a final answer based on all gathered information
 - Provide reasoning for the final response
 
+### Observe Phase (Final Output)
+The Extract phase returns an observer that provides the final output, completing the React → Extract → Observe pattern.
+
 ### Key Advantages
 
 This manual control approach provides several advantages:
@@ -79,10 +82,11 @@ This manual control approach provides several advantages:
 - **Fine-grained Control**: You can inject business logic, validation, or custom handling between any step
 - **Debugging & Monitoring**: Clear separation makes it easier to debug issues and monitor agent behavior
 
-The implementation follows DSPy's React pattern but with external orchestration:
+The implementation follows DSPy's React → Extract → Observe pattern but with external orchestration:
 - **ReactAgent**: DSPy module that performs reasoning and tool selection using `dspy.Predict`
 - **External Controller**: Manages the loop, executes tools, and decides when to continue or finish
 - **ReactExtract**: DSPy module that synthesizes final answers using `dspy.ChainOfThought`
+- **Observer**: Final output phase that returns the completed result
 
 This architecture bridges the gap between LLM reasoning and production systems that require reliability, observability, and durability.
 
