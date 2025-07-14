@@ -47,24 +47,44 @@ DSPY_DEBUG=true poetry run python agentic_loop/demo_react_agent.py
 
 ## What is the Agentic Loop?
 
-The agentic loop in this project demonstrates a manually controlled implementation of the React (Reason, Act, Observe) pattern using DSPy. Unlike typical ReAct implementations where the LLM generates interleaved thoughts and actions in a single prompt, we've decomposed the process into explicit, controllable steps:
+The agentic loop in this project demonstrates a manually controlled implementation of the DSPy React pattern, where we explicitly separate the React and Extract phases for maximum control over execution:
 
-1. **React Phase (Reasoning)**: The agent uses DSPy's Chain-of-Thought to analyze the user request, current state, and available tools to decide what action to take next
-2. **Extract Phase (Action Selection)**: The reasoning output is extracted into structured tool calls that can be executed
-3. **Observe Phase (Result Integration)**: Tool execution results are fed back into the conversation state for the next iteration
+### React Phase (Tool Selection)
+The React agent uses `dspy.Predict` to reason about the user's request and available tools, then returns:
+- **next_thought**: The agent's reasoning about what to do next
+- **next_tool_name**: Which tool to execute (or "finish" to complete the task)
+- **next_tool_args**: Arguments for the selected tool in JSON format
+
+The React phase builds a trajectory dictionary containing all thoughts, tool calls, and observations across iterations.
+
+### External Tool Execution Control
+Unlike traditional ReAct where tool execution happens inside the agent, the external controller (`demo_react_agent.py`) decides whether to:
+- Execute the selected tool and add results to the trajectory
+- Continue the React loop for another iteration
+- Handle errors and timeouts
+- Manage the overall workflow
+
+### Extract Phase (Answer Synthesis)
+After the React loop completes, the Extract agent uses `dspy.ChainOfThought` to:
+- Analyze the complete trajectory of thoughts, tool calls, and results
+- Synthesize a final answer based on all gathered information
+- Provide reasoning for the final response
+
+### Key Advantages
 
 This manual control approach provides several advantages:
 - **Durable Execution Ready**: Each phase can be checkpointed and resumed, making it suitable for integration with workflow engines like Temporal
-- **Explicit State Management**: The conversation state is fully observable and can be persisted between executions
-- **Fine-grained Control**: You can modify reasoning strategies, add custom validation, or inject business logic between phases
-- **Debugging & Monitoring**: Clear separation of concerns makes it easier to debug issues and monitor agent behavior
+- **External Control**: The orchestrating code has full control over tool execution, error handling, and flow decisions
+- **Explicit State Management**: The trajectory is fully observable and can be persisted between executions
+- **Fine-grained Control**: You can inject business logic, validation, or custom handling between any step
+- **Debugging & Monitoring**: Clear separation makes it easier to debug issues and monitor agent behavior
 
-The implementation uses:
-- **AgentReasoner**: DSPy module that performs the reasoning step with Chain-of-Thought
-- **ManualAgentLoop**: Orchestrates the React loop, converting reasoning into actions
-- **ActivityManager**: External control layer that manages iterations, timeouts, and metrics
+The implementation follows DSPy's React pattern but with external orchestration:
+- **ReactAgent**: DSPy module that performs reasoning and tool selection using `dspy.Predict`
+- **External Controller**: Manages the loop, executes tools, and decides when to continue or finish
+- **ReactExtract**: DSPy module that synthesizes final answers using `dspy.ChainOfThought`
 
-This architecture is specifically designed to bridge the gap between LLM reasoning and production systems that require reliability, observability, and durability.
+This architecture bridges the gap between LLM reasoning and production systems that require reliability, observability, and durability.
 
 ## Detailed Usage
 
