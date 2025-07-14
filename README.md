@@ -1,6 +1,13 @@
 # DSPy Agentic Loop Demo
 
-A comprehensive example demonstrating how to use DSPy with an agentic loop architecture for multi-tool selection and execution across iterations. Features type-safe tool registry, activity management, and support for multiple LLM providers (Ollama, Claude, OpenAI, Gemini).
+A comprehensive example demonstrating how to use DSPy with an agentic loop architecture for multi-tool selection and execution. This project showcases a manually controlled React-style agent loop using DSPy's Chain-of-Thought reasoning, where we explicitly control the React → Extract workflow pattern. This architecture is designed to enable future integration with durable execution frameworks while maintaining full control over the reasoning and action selection process.
+
+The implementation features:
+- Type-safe tool registry with Pydantic models for structured input/output
+- Manual control over the React (reason → act → observe) loop using DSPy
+- Activity management for execution control and metrics
+- Support for multiple LLM providers (Ollama, Claude, OpenAI, Gemini)
+- Tool sets for different domains (e-commerce, events, treasure hunt, productivity)
 
 ## Quick Start
 
@@ -14,14 +21,15 @@ A comprehensive example demonstrating how to use DSPy with an agentic loop archi
 
 ```bash
 # 1. Clone the repository
-git clone <repository-url>
-cd dspy-tool-selection
+git clone https://github.com/retroryan/dspy-system-prompt
+cd dspy-system-prompt
 
 # 2. Install dependencies
 poetry install
 
 # 3. Copy environment file
-cp .env.example .env
+cp .env.sample .env
+# Edit .env to add your API keys if using cloud providers
 
 # 4. (Optional) For Ollama: pull the model
 ollama pull gemma3:27b
@@ -30,324 +38,107 @@ ollama pull gemma3:27b
 ### Run the Demo
 
 ```bash
-# Run with default productivity tools
-./run_demo.sh
-
-# Run with specific tool set
-./run_demo.sh treasure_hunt
+# Run the React agent demo
+poetry run python agentic_loop/demo_react_agent.py
 
 # Run with debug mode to see DSPy prompts
-./run_demo.sh --debug
-
-# Run with advanced agentic loop (enhanced reasoning)
-./run_demo.sh --advanced
-
-# Combine options
-./run_demo.sh ecommerce --debug --advanced
-
-# Available tool sets: treasure_hunt, productivity, ecommerce
-```
-
-### Run Tests
-
-```bash
-# Run all tests
-poetry run pytest
-
-# Run specific test suites
-poetry run pytest tests/test_phase3_manual_agent_loop.py
-poetry run pytest tests/test_phase4_activity_manager.py
-poetry run pytest integration_tests/
+DSPY_DEBUG=true poetry run python agentic_loop/demo_react_agent.py
 ```
 
 ## What is the Agentic Loop?
 
-The agentic loop is an architecture that allows an AI agent to:
-1. **Reason** about user requests and decide which tools to use
-2. **Execute** multiple tools in a single iteration or across iterations
-3. **Evaluate** results and decide whether to continue or provide a final response
-4. **Iterate** up to a maximum number of times to complete complex tasks
+The agentic loop in this project demonstrates a manually controlled implementation of the React (Reason, Act, Observe) pattern using DSPy. Unlike typical ReAct implementations where the LLM generates interleaved thoughts and actions in a single prompt, we've decomposed the process into explicit, controllable steps:
 
-Key components:
-- **ManualAgentLoop**: Handles reasoning and decision-making using DSPy
-- **ActivityManager**: Manages execution flow, iterations, and tool calls
-- **ToolRegistry**: Type-safe registry for tool registration and execution
+1. **React Phase (Reasoning)**: The agent uses DSPy's Chain-of-Thought to analyze the user request, current state, and available tools to decide what action to take next
+2. **Extract Phase (Action Selection)**: The reasoning output is extracted into structured tool calls that can be executed
+3. **Observe Phase (Result Integration)**: Tool execution results are fed back into the conversation state for the next iteration
 
-## Advanced Agentic Loop
+This manual control approach provides several advantages:
+- **Durable Execution Ready**: Each phase can be checkpointed and resumed, making it suitable for integration with workflow engines like Temporal
+- **Explicit State Management**: The conversation state is fully observable and can be persisted between executions
+- **Fine-grained Control**: You can modify reasoning strategies, add custom validation, or inject business logic between phases
+- **Debugging & Monitoring**: Clear separation of concerns makes it easier to debug issues and monitor agent behavior
 
-The project includes an advanced agentic loop implementation with enhanced reasoning capabilities:
+The implementation uses:
+- **AgentReasoner**: DSPy module that performs the reasoning step with Chain-of-Thought
+- **ManualAgentLoop**: Orchestrates the React loop, converting reasoning into actions
+- **ActivityManager**: External control layer that manages iterations, timeouts, and metrics
 
-### Advanced Features
-
-- **Tool Result Analysis**: Analyzes tool execution results to determine next steps
-- **Goal Tracking**: Monitors progress toward task completion with sub-goal decomposition
-- **Dynamic Strategy Adaptation**: Adjusts reasoning strategy based on current progress
-- **Enhanced Error Recovery**: Multiple recovery strategies for failed tool executions
-- **Confidence Estimation**: Provides confidence scores for reasoning decisions
-
-### When to Use Advanced Mode
-
-The advanced mode is particularly beneficial for:
-- Multi-step tasks requiring several tool executions
-- Complex workflows where tools depend on each other
-- Tasks where partial completion detection is important
-- Scenarios requiring adaptive behavior based on intermediate results
-
-### Usage
-
-```bash
-# Enable debug mode with command line flag
-./run_demo.sh ecommerce --debug
-
-# Use with cloud model testing
-./run_cloud_model_comparison.sh ecommerce
-```
-
-### Configuration
-
-The agentic loop supports these environment variables:
-
-```bash
-# .env file
-AGENT_MAX_ITERATIONS=10        # Default maximum iterations
-AGENT_TIMEOUT_SECONDS=120.0    # Timeout for activity execution
-```
+This architecture is specifically designed to bridge the gap between LLM reasoning and production systems that require reliability, observability, and durability.
 
 ## Detailed Usage
 
-### Running with Different Tool Sets
+### E-commerce Tool Set
 
-The demo supports multiple tool sets, each containing related tools:
+The e-commerce tool set provides tools for online shopping scenarios:
 
 ```bash
-# Treasure Hunt Tools (give_hint, guess_location)
-./run_demo.sh treasure_hunt
+# Run e-commerce demo
+poetry run python agentic_loop/demo_react_agent.py
 
-# Productivity Tools (set_reminder)
-./run_demo.sh productivity
-
-# E-commerce Tools (search_products, add_to_cart, etc.)
-./run_demo.sh ecommerce
-
-# With debug output
-./run_demo.sh treasure_hunt --debug
-
-# With advanced reasoning capabilities
-./run_demo.sh ecommerce --advanced
-
-# Both debug and advanced mode
-./run_demo.sh ecommerce --debug --advanced
+# Example interactions:
+# - "Search for laptops under $1000"
+# - "Add the first laptop to my cart"
+# - "Track order #12345"
+# - "Return the laptop from order #12345"
 ```
+
+Available tools:
+- `search_products`: Search for products by query and filters
+- `add_to_cart`: Add items to shopping cart
+- `list_orders`: View customer orders
+- `get_order`: Get details of a specific order
+- `track_order`: Track shipping status
+- `return_item`: Process returns
+
+### Events Tool Set
+
+The events tool set provides tools for event management:
+
+```bash
+# Run with events tools
+poetry run python agentic_loop/demo_react_agent.py
+
+# Example interactions:
+# - "Find tech events in San Francisco"
+# - "Create a team meeting for next Monday at 2pm"
+# - "Cancel the event with ID EVT-123"
+```
+
+Available tools:
+- `find_events`: Search for events by type, location, and date
+- `create_event`: Create new events with details
+- `cancel_event`: Cancel existing events
 
 ### Output and Results
 
 The demo provides:
 - Real-time execution progress with reasoning traces
-- Performance metrics (precision, recall, F1 score)
-- Visual performance bars
-- JSON results saved to `test_results/agent_loop_{tool_set}_{timestamp}.json`
+- Tool execution results and state updates
+- Performance metrics for each iteration
+- Visual progress indicators
+- JSON results saved to `test_results/` directory
 
 ### Using Different LLM Providers
 
-The agentic loop supports multiple LLM providers through DSPy's unified interface:
+Configure your LLM provider in the `.env` file:
 
 #### Ollama (Local - Default)
 ```bash
-# Already configured in .env.example
-./run_demo.sh
+DSPY_PROVIDER=ollama
+OLLAMA_MODEL=gemma3:27b
 ```
 
 #### Claude (Anthropic)
 ```bash
-# Copy Claude configuration
-cp claude.env .env
-# Add your API key to .env: ANTHROPIC_API_KEY=sk-ant-api03-...
-./run_demo.sh
+DSPY_PROVIDER=claude
+ANTHROPIC_API_KEY=your-api-key-here
 ```
 
 #### OpenAI
 ```bash
-# Copy OpenAI configuration
-cp openai.env .env
-# Add your API key to .env: OPENAI_API_KEY=sk-...
-./run_demo.sh
-```
-
-### Model Comparison
-
-#### Local Models (Ollama)
-
-Compare different Ollama models on the same tool set:
-
-```bash
-# Compare default models (gemma3:27b, llama3.1:8b) on productivity tools
-./run_model_comparison.sh
-
-# Compare specific models on treasure hunt
-./run_model_comparison.sh treasure_hunt --models "gemma3:27b,llama3.1:8b,llama3.2:3b"
-
-# Test single model on ecommerce
-./run_model_comparison.sh ecommerce --models "gemma3:27b"
-```
-
-Results are saved to `test_results/model_comparison_{tool_set}_{timestamp}.json`
-
-#### Cloud Models (Claude & OpenAI)
-
-Compare cloud models using the cloud model comparison script:
-
-```bash
-# 1. Copy and configure cloud_test.env
-cp cloud_test.env.example cloud_test.env
-# Edit cloud_test.env to add your API keys and configure models to test
-
-# 2. Run cloud model comparison using models from cloud_test.env
-./run_cloud_model_comparison.sh ecommerce
-
-# 3. Override models via command line
-./run_cloud_model_comparison.sh treasure_hunt --models "claude-3-haiku-20240307,gpt-4"
-
-# 4. Test specific providers only
-./run_cloud_model_comparison.sh productivity --providers "claude"
-
-# 5. Combine provider and model selection
-./run_cloud_model_comparison.sh ecommerce --providers "openai" --models "gpt-3.5-turbo,gpt-4"
-
-# 6. Test with advanced agentic loop
-./run_cloud_model_comparison.sh ecommerce --advanced
-
-# 7. Test specific models with advanced reasoning
-./run_cloud_model_comparison.sh ecommerce --models "claude-3-haiku-20240307" --advanced
-```
-
-##### Configuring cloud_test.env
-
-The `cloud_test.env` file supports the following configuration:
-
-```bash
-# API Keys (required)
-ANTHROPIC_API_KEY=your-claude-api-key
-OPENAI_API_KEY=your-openai-api-key
-
-# Models to test (optional - will use these if --models not specified)
-# You can specify any model IDs supported by your API providers
-# Examples: claude-3-haiku-20240307, claude-3-5-sonnet-20241022, gpt-4, gpt-4-turbo, o1-preview
-CLOUD_TEST_MODELS=claude-3-haiku-20240307,claude-3-sonnet-20240229,gpt-3.5-turbo,gpt-4
-
-# LLM settings
-LLM_TEMPERATURE=0.7
-LLM_MAX_TOKENS=1024
-```
-
-Results are saved to `test_results/cloud_model_comparison_{tool_set}_{timestamp}.json`
-
-##### Viewing Test Results
-
-All test results are saved in the `test_results/` directory (gitignored). You can view them with:
-
-```bash
-# List all test results
-ls -la test_results/
-
-# View latest cloud model comparison
-cat test_results/cloud_model_comparison_*.json | tail -1 | jq .
-
-# View specific result file
-cat test_results/cloud_model_comparison_ecommerce_20250711_191000.json | jq .
-```
-
-### Advanced Options
-
-#### Configure Iterations and Timeouts
-
-Edit the ActivityManager initialization in `agent_loop_demo.py`:
-
-```python
-activity_manager = ActivityManager(
-    agent_loop=agent_loop,
-    tool_registry=tool_registry,
-    max_iterations=5,      # Increase max iterations
-    timeout_seconds=60.0   # Increase timeout
-)
-```
-
-#### Custom Tool Sets
-
-Create a new tool set by:
-1. Implementing tools that inherit from `BaseTool`
-2. Creating a `ToolSet` subclass
-3. Registering it in `agent_loop_demo.py`
-
-Example:
-```python
-class MyCustomToolSet(ToolSet):
-    NAME = "custom"
-    
-    def __init__(self):
-        super().__init__(
-            config=ToolSetConfig(
-                name=self.NAME,
-                description="My custom tools",
-                tool_classes=[MyTool1, MyTool2]
-            )
-        )
-```
-
-## Project Structure
-
-```
-dspy-tool-selection/
-├── agentic_loop/           # Agentic loop implementation
-│   ├── agent_loop_demo.py  # Main demo script
-│   ├── agent_reasoner.py   # DSPy reasoning module
-│   ├── manual_agent_loop.py # Loop orchestration
-│   └── activity_manager.py  # Execution management
-├── shared/                 # Shared components
-│   ├── models.py           # Core data models
-│   ├── registry.py         # Tool registry
-│   └── tool_set_registry.py # Tool set management
-├── tool_selection/         # Tool sets and definitions
-│   ├── tool_sets.py        # Tool set implementations
-│   └── base_tool.py        # Base tool class
-├── tools/                  # Individual tool implementations
-│   ├── treasure_hunt/      # Treasure hunt tools
-│   ├── productivity/       # Productivity tools
-│   └── ecommerce/          # E-commerce tools
-├── tests/                  # Unit tests
-├── integration_tests/      # Integration tests
-└── test_results/           # Test execution results (gitignored)
-```
-
-## Key Concepts
-
-### Agentic Loop Architecture
-
-1. **Stateless Operation**: Each iteration receives full context
-2. **External Control**: ActivityManager controls execution flow
-3. **Multi-Tool Support**: Can select and execute multiple tools per iteration
-4. **Error Recovery**: Built-in error handling and recovery strategies
-5. **Iteration Management**: Configurable max iterations with early termination
-
-### Tool Development
-
-Tools must:
-- Inherit from `BaseTool`
-- Define `NAME` and `MODULE` class attributes
-- Implement `execute()` method
-- Define `args_model` for input validation
-- Return structured results
-
-Example:
-```python
-class MyTool(BaseTool):
-    NAME = "my_tool"
-    MODULE = "custom"
-    
-    class ArgsModel(BaseModel):
-        query: str
-    
-    def execute(self, query: str) -> Dict[str, Any]:
-        return {"result": f"Processed: {query}"}
+DSPY_PROVIDER=openai
+OPENAI_API_KEY=your-api-key-here
 ```
 
 ## Testing
@@ -366,24 +157,17 @@ poetry run pytest integration_tests/test_simple_workflow.py -v
 poetry run pytest integration_tests/test_full_workflow.py -v
 ```
 
-### Running Specific Tests
-```bash
-# Run tests matching a pattern
-poetry run pytest -k "test_multi_tool"
-
-# Run with coverage
-poetry run pytest --cov=agentic_loop --cov=shared
-```
-
 ## Troubleshooting
 
 - **Ollama not running**: Start with `ollama serve`
 - **Model not found**: Pull with `ollama pull gemma3:27b`
 - **Import errors**: Ensure you're using `poetry run` or activated the virtual environment
 - **API key errors**: Check your `.env` file has the correct API keys
-- **Timeout errors**: Increase `timeout_seconds` in ActivityManager
+- **Timeout errors**: Increase `AGENT_TIMEOUT_SECONDS` in `.env`
 
 ## Environment Variables
+
+See `.env.sample` for all available configuration options. Key variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -393,14 +177,12 @@ poetry run pytest --cov=agentic_loop --cov=shared
 | `LLM_MAX_TOKENS` | Maximum tokens | `1024` |
 | `DSPY_DEBUG` | Show DSPy prompts/responses | `false` |
 | `AGENT_MAX_ITERATIONS` | Maximum agent loop iterations | `5` |
-| `AGENT_TIMEOUT_SECONDS` | Maximum execution time per activity | `60.0` |
+| `AGENT_TIMEOUT_SECONDS` | Maximum execution time | `60.0` |
 
 ## Next Steps
 
 - Explore different tool sets and their capabilities
-- Try the agentic loop for complex multi-step tasks
 - Create custom tools for your use case
 - Experiment with different LLM providers
-- Adjust iteration limits and reasoning strategies
+- Integrate with durable execution frameworks
 - Build complex multi-step workflows
-- Compare basic vs advanced mode performance
