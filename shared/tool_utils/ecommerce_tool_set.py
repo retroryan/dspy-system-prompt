@@ -4,6 +4,12 @@ from datetime import datetime, timedelta
 import dspy
 
 
+# NOTE: ReactSignatures in this project follow a specific design pattern:
+# - They only define input fields (e.g., user_query)
+# - The ReactAgent dynamically adds the standard React output fields at runtime:
+#   (next_thought, next_tool_name, next_tool_args)
+# - This separation allows tool sets to provide domain-specific instructions
+#   while the ReactAgent handles the standard React pattern implementation
 class EcommerceReactSignature(dspy.Signature):
     """E-commerce tool execution requirements.
     

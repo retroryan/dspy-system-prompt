@@ -25,6 +25,9 @@ sys.path.insert(0, str(project_root / "shared" / "tool_utils"))
 from shared import ConsoleFormatter, setup_llm
 from shared.llm_utils import save_dspy_history, get_full_history
 
+# Import core loop functionality
+from agentic_loop.core_loop import run_agent_loop
+
 # Import tool sets
 from shared.tool_utils import (
     EventsToolSet,
@@ -79,211 +82,74 @@ def create_tool_set_registry(tool_set_name: str) -> ToolRegistry:
     return registry
 
 
-def run_react_loop(react_agent, tool_registry, user_query: str, tool_set_name: str, max_iterations: int = 5) -> Tuple[Dict[str, Any], float]:
-    """
-    Run the React agent loop until completion or max iterations.
-    
-    Args:
-        react_agent: The initialized ReactAgent
-        tool_registry: The tool registry for executing tools
-        user_query: The user's question
-        tool_set_name: Name of the tool set being used
-        max_iterations: Maximum number of iterations
-        
-    Returns:
-        Tuple of (trajectory dictionary, execution time)
-    """
-    trajectory = {}
-    current_iteration = 1
-    start_time = time.time()
-    
-    # Check if DSPY debug mode is enabled
-    dspy_debug_enabled = os.getenv("DSPY_DEBUG", "false").lower() == "true"
-    
-    logger.debug("Starting ReactAgent loop")
-    logger.debug(f"Query: {user_query}")
-    
-    # Loop until we get "finish" or hit max iterations
-    while current_iteration <= max_iterations:
-        logger.debug(f"Iteration {current_iteration}/{max_iterations}")
-        
-        # Call ReactAgent
-        trajectory, tool_name, tool_args = react_agent(
-            trajectory=trajectory,
-            current_iteration=current_iteration,
-            user_query=user_query
-        )
-        
-        # Save ReactAgent history only if DSPY debug is enabled
-        if dspy_debug_enabled:
-            try:
-                saved_path = save_dspy_history(
-                    tool_set_name=tool_set_name,
-                    agent_type="react",
-                    index=current_iteration
-                )
-                if saved_path:
-                    logger.debug(f"Saved ReactAgent history to: {saved_path}")
-            except Exception as e:
-                logger.warning(f"Failed to save ReactAgent history: {e}")
-        
-        logger.debug(f"Tool selected: {tool_name}")
-        logger.debug(f"Tool args: {tool_args}")
-        
-        # Check if we're done
-        if tool_name == "finish":
-            logger.debug("Agent selected 'finish' - task complete")
-            # Add final observation for finish
-            trajectory[f"observation_{current_iteration-1}"] = "Completed."
-            break
-        
-        # Execute the tool if it's not finish
-        if tool_name in tool_registry.get_all_tools():
-            try:
-                tool = tool_registry.get_tool(tool_name)
-                logger.debug(f"Executing tool: {tool_name}")
-                result = tool.execute(**tool_args)
-                logger.debug(f"Tool result: {result}")
-                
-                # Add tool result to trajectory
-                idx = current_iteration - 1
-                trajectory[f"observation_{idx}"] = result
-                
-            except Exception as e:
-                logger.error(f"Tool execution error: {e}", exc_info=True)
-                trajectory[f"observation_{current_iteration-1}"] = f"Error: {e}"
-        else:
-            logger.warning(f"Unknown tool: {tool_name}")
-            trajectory[f"observation_{current_iteration-1}"] = f"Error: Unknown tool {tool_name}"
-        
-        current_iteration += 1
-    
-    if current_iteration > max_iterations:
-        logger.warning(f"Reached maximum iterations ({max_iterations})")
-    
-    execution_time = time.time() - start_time
-    return trajectory, execution_time
-
-
-def extract_final_answer(trajectory: Dict[str, Any], user_query: str, tool_set_name: str) -> Tuple[str, str]:
-    """
-    Extract the final answer from the trajectory using the Extract Agent.
-    
-    Args:
-        trajectory: The complete trajectory from the React loop
-        user_query: The original user query
-        tool_set_name: Name of the tool set being used
-        
-    Returns:
-        Tuple of (answer, reasoning)
-    """
-    from agentic_loop.extract_agent import ReactExtract
-    
-    # Check if DEMO debug mode is enabled
-    demo_debug_enabled = os.getenv("DEMO_DEBUG", "false").lower() == "true"
-    
-    logger.debug("Extracting final answer from trajectory")
-    logger.debug(f"Trajectory keys: {list(trajectory.keys())}")
-    
-    # Create a signature for answer extraction
-    class AnswerExtractionSignature(dspy.Signature):
-        """Extract a clear, concise answer from the gathered information."""
-        user_query: str = dspy.InputField(desc="The user's original question")
-        answer: str = dspy.OutputField(desc="Clear, direct answer to the user's question")
-    
-    # Initialize Extract Agent
-    extract_agent = ReactExtract(signature=AnswerExtractionSignature)
-    
-    # Extract answer from trajectory
-    logger.debug("Calling Extract Agent")
-    result = extract_agent(
-        trajectory=trajectory,
-        user_query=user_query
-    )
-    
-    # Save ExtractAgent history only if DSPY debug is enabled
-    if demo_debug_enabled:
-        try:
-            saved_path = save_dspy_history(
-                tool_set_name=tool_set_name,
-                agent_type="extract",
-                index=1  # Extract is typically called once at the end
-            )
-            if saved_path:
-                logger.debug(f"Saved ExtractAgent history to: {saved_path}")
-        except Exception as e:
-            logger.warning(f"Failed to save ExtractAgent history: {e}")
-    
-    logger.debug("Successfully extracted final answer")
-    return result.answer, getattr(result, 'reasoning', '')
 
 
 def run_single_test_case(test_case, tool_registry, tool_set_name: str, console: ConsoleFormatter) -> Dict[str, Any]:
     """Run a single test case and return results."""
-    from agentic_loop.react_agent import ReactAgent
     
-    # Check if DSPY debug mode is enabled
-    dspy_debug_enabled = os.getenv("DSPY_DEBUG", "false").lower() == "true"
-    
-    # Get tool set specific signature if available
-    tool_set_signature = tool_registry.get_react_signature()
-    
-    if tool_set_signature:
-        # Format the signature's docstring with current date if needed
-        current_date = datetime.now().strftime("%Y-%m-%d")
-        if hasattr(tool_set_signature, '__doc__') and tool_set_signature.__doc__:
-            tool_set_signature.__doc__ = tool_set_signature.__doc__.format(current_date=current_date)
-        ReactSignature = tool_set_signature
-    else:
-        # Fallback to generic signature
-        class ReactSignature(dspy.Signature):
-            """Use tools to answer the user's question."""
-            user_query: str = dspy.InputField(desc="The user's question")
-    
-    # Initialize ReactAgent
-    react_agent = ReactAgent(
-        signature=ReactSignature,
-        tool_registry=tool_registry
-    )
+    # Check if verbose mode is enabled
+    demo_verbose_enabled = os.getenv("DEMO_VERBOSE", "false").lower() == "true"
     
     # Run React loop
     logger.info(console.section_header('🔄 React Agent Execution', char='-', width=60))
     
     try:
-        trajectory, react_time = run_react_loop(
-            react_agent=react_agent,
-            tool_registry=tool_registry,
+        # Use the core loop to run the agent
+        result = run_agent_loop(
             user_query=test_case.request,
+            tool_registry=tool_registry,
             tool_set_name=tool_set_name,
             max_iterations=5
         )
         
-        # Extract tools used
-        tools_used = []
-        for key in sorted(trajectory.keys()):
-            if key.startswith("tool_name_") and trajectory[key] != "finish":
-                tools_used.append(trajectory[key])
-        
-        logger.info(f"✓ React loop completed in {react_time:.2f}s")
-        logger.info(f"  Iterations: {len([k for k in trajectory.keys() if k.startswith('thought_')])}")
-        logger.info(f"  Tools used: {', '.join(tools_used) if tools_used else 'None'}")
-        
-        # Extract final answer
-        logger.info(f"\n{console.section_header('📝 Extract Agent', char='-', width=60)}")
-        answer, reasoning = extract_final_answer(trajectory, test_case.request, tool_set_name)
-        
-        logger.info("✓ Answer extracted successfully")
-        
-        return {
-            'status': 'success',
-            'trajectory': trajectory,
-            'tools_used': tools_used,
-            'execution_time': react_time,
-            'answer': answer,
-            'reasoning': reasoning,
-            'expected_tools': test_case.expected_tools,
-            'tools_match': set(tools_used) == set(test_case.expected_tools)
-        }
+        # Check if successful
+        if result['status'] == 'success':
+            logger.info(f"✓ React loop completed in {result['execution_time']:.2f}s")
+            logger.info(f"  Iterations: {result.get('iteration_details', {}).get('iteration_count', 0)}")
+            logger.info(f"  Tools used: {', '.join(result['tools_used']) if result['tools_used'] else 'None'}")
+            
+            # Show iteration details in verbose mode
+            if demo_verbose_enabled and 'iteration_details' in result:
+                logger.info("")
+                logger.info("  Iteration Details:")
+                for timing in result['iteration_details']['iteration_timings']:
+                    logger.info(f"    → Iteration {timing['iteration']}: {timing['time']:.2f}s")
+                    if timing['thought']:
+                        # Truncate long thoughts
+                        thought = timing['thought']
+                        if len(thought) > 80:
+                            thought = thought[:77] + "..."
+                        logger.info(f"      Thought: {thought}")
+                    logger.info(f"      Tool: {timing['tool']}")
+                    
+                    # Show observation if available
+                    if demo_verbose_enabled:
+                        obs_key = f"observation_{timing['iteration']-1}"
+                        if obs_key in result['trajectory']:
+                            obs = str(result['trajectory'][obs_key])
+                            if len(obs) > 100:
+                                obs = obs[:97] + "..."
+                            logger.info(f"      Result: {obs}")
+            
+            # Extract final answer
+            logger.info(f"\n{console.section_header('📝 Extract Agent', char='-', width=60)}")
+            logger.info("✓ Answer extracted successfully")
+            
+            # Add test case specific fields
+            result['expected_tools'] = test_case.expected_tools
+            result['tools_match'] = set(result['tools_used']) == set(test_case.expected_tools)
+            
+            return result
+        else:
+            # Error case
+            return {
+                'status': 'error',
+                'error': result.get('error', 'Unknown error'),
+                'execution_time': 0,
+                'tools_used': [],
+                'expected_tools': test_case.expected_tools,
+                'tools_match': False
+            }
         
     except Exception as e:
         logger.error(f"Test case failed: {e}", exc_info=True)
@@ -303,7 +169,7 @@ def run_test_cases(tool_set_name: str, test_case_index: Optional[int] = None):
     
     # Check if DSPY debug mode is enabled
     dspy_debug_enabled = os.getenv("DSPY_DEBUG", "false").lower() == "true"
-    demo_debug_enabled = os.getenv("DEMO_DEBUG", "false").lower() == "true"
+    demo_verbose_enabled = os.getenv("DEMO_VERBOSE", "false").lower() == "true"
 
     logger.info(console.section_header('🚀 ReactAgent + Extract Agent Demo'))
     logger.info(f"Tool Set: {tool_set_name}")
@@ -366,9 +232,9 @@ def run_test_cases(tool_set_name: str, test_case_index: Optional[int] = None):
             logger.info(f"\n{console.section_header('🎯 Final Answer', char='-', width=60)}")
             logger.info(result['answer'])
             
-            if result['reasoning'] and logger.level == logging.DEBUG:
-                logger.debug(f"\n{console.section_header('💭 Reasoning', char='-', width=60)}")
-                logger.debug(result['reasoning'])
+            if result['reasoning'] and (logger.level == logging.DEBUG or demo_verbose_enabled):
+                logger.info(f"\n{console.section_header('💭 Reasoning', char='-', width=60)}")
+                logger.info(result['reasoning'])
             
             # Save history if DSPY debug is enabled
             if dspy_debug_enabled:
@@ -411,6 +277,11 @@ Examples:
   poetry run python agentic_loop/demo_react_agent.py agriculture  # Run all agriculture test cases
   poetry run python agentic_loop/demo_react_agent.py agriculture 2    # Run only agriculture test case 2
   poetry run python agentic_loop/demo_react_agent.py treasure_hunt # Run treasure hunt test cases
+
+Verbose Mode:
+  ./run_demo.sh --verbose                   # Show agent thoughts and tool results
+  ./run_demo.sh -v agriculture              # Verbose mode with agriculture tools
+  ./run_demo.sh --debug                     # Full DSPy debug output (very verbose!)
         """
     )
     

@@ -41,20 +41,16 @@ This is a DSPy demo project that demonstrates an agentic loop architecture for m
 poetry install
 
 # Run the agentic loop evaluation
-poetry run python -m agentic_loop.evaluate_agent_loop
+poetry run python -m agentic_loop.demo_react_agent
 
 # Run with specific tool set
-poetry run python -m agentic_loop.evaluate_agent_loop treasure_hunt
+poetry run python -m agentic_loop.demo_react_agent agriculture
 
 # Run tests
 poetry run pytest
 
-# Run specific test phases
-poetry run pytest tests/test_phase3_manual_agent_loop.py
-poetry run pytest tests/test_phase4_activity_manager.py
-
-# Run integration tests
-poetry run pytest integration_tests/
+# Run integration tests with specific tools
+poetry run python -m tools.precision_agriculture.test_weather
 ```
 
 ### Testing & Development
@@ -62,69 +58,73 @@ poetry run pytest integration_tests/
 ```bash
 # Run with debug output to see DSPy prompts and LLM responses
 export DSPY_DEBUG=true
-poetry run python -m agentic_loop.evaluate_agent_loop
+poetry run python -m agentic_loop.demo_react_agent
 
 # Run a simple workflow test
-poetry run python -m integration_tests.test_simple_workflow
+poetry run python -m agentic_loop.demo_react_agent ecommerce
 ```
 
 ## Architecture Overview
 
 ### Core Components
 
-1. **agentic_loop/evaluate_agent_loop.py**: Evaluation script that tests the agentic loop with different tool sets and measures performance metrics.
+1. **agentic_loop/demo_react_agent.py**: Main demo script that orchestrates the React → Extract → Observe pattern with external control.
 
-2. **agentic_loop/agent_reasoner.py**: Core DSPy module that performs reasoning about tool selection and task completion:
-   - Uses `dspy.ChainOfThought` for step-by-step reasoning
-   - Decides which tools to use and whether to continue iterating
-   - Returns structured `ReasoningOutput` with tool calls and decisions
+2. **agentic_loop/react_agent.py**: Core DSPy module implementing the React pattern:
+   - Uses `dspy.Predict` for tool selection reasoning
+   - Returns structured output with next_thought, next_tool_name, next_tool_args
+   - Builds and maintains trajectory of all actions and observations
 
-3. **agentic_loop/manual_agent_loop.py**: Orchestrates the agentic loop:
-   - Stateless operation - receives full context each iteration
-   - Converts reasoning output to action decisions
-   - Manages conversation state and history
+3. **agentic_loop/extract_agent.py**: DSPy module for final answer synthesis:
+   - Uses `dspy.ChainOfThought` to analyze complete trajectory
+   - Synthesizes coherent final answer from all tool results
+   - Returns reasoning and final answer
 
-4. **agentic_loop/activity_manager.py**: External control layer for the loop:
-   - Manages iterations and timeouts
-   - Executes tools based on agent decisions
-   - Tracks execution metrics and results
-   - Returns complete `ActivityResult` with all execution details
+4. **shared/models.py**: Core data models for the system:
+   - `ToolCall`: Structure for tool invocation
+   - `ToolExecutionResult`: Tool execution outcomes
+   - `ToolTestCase`: Test case definitions for validation
 
-5. **shared/models.py**: Core data models for the agentic loop:
-   - `ActionDecision`: What action to take next
-   - `ConversationState`: Complete state of the conversation
-   - `ToolCall` and `ToolExecutionResult`: Tool execution structures
-   - `ActivityResult`: Final result of an activity
+5. **shared/tool_utils/registry.py**: Tool registry for managing available tools:
+   - Dynamic tool registration
+   - Type-safe tool execution
+   - Error handling and validation
 
-6. **shared/registry.py**: Tool registry adapted for agentic loop:
-   - Returns `ToolExecutionResult` objects
-   - Handles tool execution with error handling
-   - Type-safe tool registration
+6. **shared/tool_utils/base_tool_sets.py**: Base classes for tool sets:
+   - `ToolSet`: Base class for collections of related tools
+   - `ToolSetTestCase`: Test case structure for tool sets
+   - Provides test cases for validation
 
-7. **shared/tool_set_registry.py**: Manages collections of related tools:
-   - Allows loading specific tool sets (treasure_hunt, productivity, ecommerce)
-   - Provides explicit control over available tools
+7. **Tool Sets** (in shared/tool_utils/):
+   - `AgricultureToolSet`: Weather tools (current, forecast, historical)
+   - `EcommerceToolSet`: Shopping tools (search, cart, orders, tracking)
+   - `EventsToolSet`: Event management tools (find, create, cancel)
 
 ### Key Design Patterns
 
-1. **Agentic Loop Architecture**: 
-   - Agent reasons about the task and available tools
-   - Executes selected tools
-   - Evaluates results and decides whether to continue
-   - Iterates until task completion or max iterations
+1. **React → Extract → Observe Pattern**: 
+   - React agent reasons and selects tools iteratively
+   - External controller executes tools and manages state
+   - Extract agent synthesizes final answer from complete trajectory
+   - Observer returns final result to user
 
-2. **Stateless Operation**: Each iteration receives full context, making the system more robust and easier to debug
+2. **External Control**: The demo script maintains full control over:
+   - Tool execution
+   - Error handling
+   - Iteration limits
+   - State management
 
-3. **External Control**: ActivityManager provides full control over execution flow, allowing for timeouts, error handling, and metrics
+3. **Trajectory-Based State**: All reasoning, actions, and observations stored in a simple dictionary for full observability
 
 4. **Type Safety**: Pydantic models ensure all data structures are validated and type-safe
 
-5. **Multi-Tool Support**: Agents can select and execute multiple tools in a single iteration
+5. **Tool Set Organization**: Related tools grouped into sets with their own test cases
 
 ### DSPy Concepts Used
 
-- **Chain of Thought**: Core reasoning mechanism for the agent
-- **Signatures**: Define input/output contracts for reasoning
+- **dspy.Predict**: For React agent tool selection
+- **dspy.ChainOfThought**: For Extract agent answer synthesis
+- **Signatures**: Define input/output contracts
 - **Pydantic Integration**: Type-safe structured outputs
 - **Synchronous Execution**: Following DSPy best practices
 
@@ -140,36 +140,36 @@ poetry run python -m integration_tests.test_simple_workflow
 Use patterns like:
 - `--glob "!.venv/**"` with Grep
 - Exclude `.venv` in search paths
-- Focus searches on project directories: `agentic_loop/`, `tools/`, `shared/`, `tool_selection/`
+- Focus searches on project directories: `agentic_loop/`, `tools/`, `shared/`
 
 ### Working with the Agentic Loop
 
 When working with the agentic loop:
 
 1. **Adding New Tools**:
-   - Create tool class inheriting from `BaseTool`
-   - Add to appropriate tool set in `tool_selection/tool_sets.py`
-   - Tools are automatically available when their tool set is loaded
+   - Create tool class inheriting from `BaseTool` in appropriate directory
+   - Add to tool set class in `shared/tool_utils/`
+   - Include test cases in the tool set
 
 2. **Creating Tool Sets**:
-   - Subclass `ToolSet` in `tool_selection/tool_sets.py`
+   - Subclass `ToolSet` in `shared/tool_utils/`
    - Define tool classes and test cases
-   - Register in `evaluate_agent_loop.py`
+   - Register in `demo_react_agent.py` TOOL_SET_MAP
 
 3. **Modifying the Loop**:
-   - Keep `ManualAgentLoop` stateless
-   - Put execution logic in `ActivityManager`
-   - Use `AgentReasoner` for all LLM reasoning
+   - Keep external control in `demo_react_agent.py`
+   - Maintain trajectory structure for observability
+   - Use DSPy modules for all LLM interactions
 
 4. **Testing**:
-   - Unit tests for individual components
-   - Integration tests for full workflows
-   - Always test with multiple tool sets
+   - Each tool set includes test cases
+   - Run demo with specific tool sets to validate
+   - Use DSPY_DEBUG=true to see prompts and responses
 
 ## Configuration
 
 The project uses environment variables configured in `.env`:
-- `DSPY_PROVIDER`: LLM provider (ollama, claude, openai)
+- `DSPY_PROVIDER`: LLM provider (ollama, claude, openai, gemini)
 - `OLLAMA_MODEL`: The Ollama model to use (default: gemma3:27b)
 - `OLLAMA_BASE_URL`: Ollama server URL (default: http://localhost:11434)
 - `LLM_TEMPERATURE`: Generation temperature (default: 0.7)
@@ -177,9 +177,8 @@ The project uses environment variables configured in `.env`:
 - `DSPY_DEBUG`: Enable debug output to see prompts and LLM responses
 
 ### Agent Loop Configuration
-Agent loops use the same LLM configuration as the main system:
-- `AGENT_MAX_ITERATIONS`: Maximum iterations for agent loop (default: 5)
-- `AGENT_TIMEOUT_SECONDS`: Timeout for agent loop execution (default: 60.0)
+- `AGENT_MAX_ITERATIONS`: Maximum iterations for React loop (default: 5)
+- `AGENT_TIMEOUT_SECONDS`: Timeout for agent execution (default: 60.0)
 
 ## Prerequisites
 
@@ -190,7 +189,7 @@ Agent loops use the same LLM configuration as the main system:
 
 ## Test Results
 
-Test results are saved to `test_results/` directory with format:
-`agent_loop_{tool_set}_{timestamp}.json`
+Test results from demo runs are saved to `prompts_out/` directory with format:
+`{tool_set}_extract_{iteration}_{timestamp}.json`
 
-This directory is gitignored to keep the repository clean.
+This directory contains execution traces for debugging and analysis.

@@ -4,6 +4,13 @@ from datetime import datetime, timedelta
 import dspy
 
 
+# NOTE: ReactSignatures in this project follow a specific design pattern:
+# - They only define input fields (e.g., user_query)
+# - The ReactAgent dynamically adds the standard React output fields at runtime:
+#   (next_thought, next_tool_name, next_tool_args)
+# - This separation allows tool sets to provide domain-specific instructions
+#   while the ReactAgent handles the standard React pattern implementation
+
 class AgricultureReactSignature(dspy.Signature):
     """Weather tool execution requirements with coordinate extraction.
     
@@ -14,13 +21,11 @@ class AgricultureReactSignature(dspy.Signature):
     
     COORDINATE EXTRACTION EXAMPLES:
     - "New York City" → latitude: 40.7128, longitude: -74.0060
-    - "Des Moines, Iowa" → latitude: 41.5868, longitude: -93.6250
     - "Ames, Iowa" → latitude: 42.0308, longitude: -93.6319
     - "San Francisco" → latitude: 37.7749, longitude: -122.4194
     - "London, England" → latitude: 51.5074, longitude: -0.1278
     - "Olympia, Washington" → latitude: 47.0379, longitude: -122.9007
-    - "Miami" → latitude: 25.7617, longitude: -80.1918
-    
+
     WEATHER PRECISION REQUIREMENTS:
     - Local weather varies significantly by elevation and proximity to water
     - Microclimates affect temperature and precipitation patterns

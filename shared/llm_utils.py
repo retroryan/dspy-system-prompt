@@ -1,14 +1,28 @@
-"""LLM Factory for multi-provider support using DSPy's unified interface."""
+"""
+LLM utilities for DSPy demo project.
+
+This module provides a clean, simple interface for setting up LLMs using DSPy's native
+capabilities and LiteLLM's automatic provider routing. It follows DSPy best practices:
+- Direct use of dspy.LM() with provider/model format
+- Synchronous-only operations
+- No unnecessary abstractions or compatibility layers
+- Leverages LiteLLM's 100+ provider support
+"""
 
 import os
-import dspy
-from typing import Optional, List, Dict, Any
-from dotenv import load_dotenv
-from pathlib import Path
-import logging
 import json
+import logging
+from pathlib import Path
+from typing import Optional, List, Dict, Any
 from datetime import datetime
+
+import dspy
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
+
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class TokenUsage(BaseModel):
@@ -53,102 +67,100 @@ class LLMHistory(BaseModel):
                 self.total_cost += entry.cost
 
 
-def setup_llm(provider: Optional[str] = None) -> dspy.LM:
+def setup_llm(model: Optional[str] = None, **kwargs) -> dspy.LM:
     """
-    Factory function to configure DSPy LLM based on provider.
+    Set up and configure a language model using DSPy's native LiteLLM integration.
+    
+    This function follows DSPy best practices by directly using dspy.LM() with
+    the provider/model format, letting LiteLLM handle all provider routing automatically.
     
     Args:
-        provider: The LLM provider to use. If None, reads from DSPY_PROVIDER env var.
-                 Options: 'ollama', 'claude', 'openai', 'gemini', etc.
+        model: Full model string in provider/model format (e.g., "openai/gpt-4o-mini").
+               If None, reads from LLM_MODEL environment variable.
+        **kwargs: Additional parameters passed directly to dspy.LM (overrides defaults).
     
     Returns:
-        Configured dspy.LM instance
+        Configured dspy.LM instance.
+    
+    Examples:
+        # Use environment variable
+        llm = setup_llm()
+        
+        # Explicit model specification
+        llm = setup_llm("openai/gpt-4o-mini")
+        llm = setup_llm("anthropic/claude-3-opus-20240229")
+        llm = setup_llm("ollama/gemma3:27b")
+        llm = setup_llm("gemini/gemini-1.5-pro")
+    
+    Environment Variables:
+        LLM_MODEL: Default model to use (e.g., "openai/gpt-4o-mini")
+        LLM_TEMPERATURE: Generation temperature (default: 0.7)
+        LLM_MAX_TOKENS: Maximum tokens to generate (default: 1024)
+        LLM_RETRIES: Number of retries for transient failures (default: 3)
+        LLM_CACHE: Enable caching (default: true)
+        DSPY_DEBUG: Enable debug logging (default: false)
     """
-    # Load environment variables
+    # Load environment variables from .env file if it exists
     env_file = Path(__file__).parent.parent / ".env"
     if env_file.exists():
         load_dotenv(env_file)
     
-    # Get provider from argument or environment
-    provider = provider or os.getenv("DSPY_PROVIDER", "ollama")
+    # Get model from parameter or environment
+    model = model or os.getenv("LLM_MODEL", "openai/gpt-4o-mini")
     
-    # Common settings
-    temperature = float(os.getenv("LLM_TEMPERATURE", "0.7"))
-    max_tokens = int(os.getenv("LLM_MAX_TOKENS", "1024"))
-    debug = os.getenv("DSPY_DEBUG", "false").lower() == "true"
+    # Build configuration from environment with kwargs overrides
+    config = {
+        "temperature": float(os.getenv("LLM_TEMPERATURE", "0.7")),
+        "max_tokens": int(os.getenv("LLM_MAX_TOKENS", "1024")),
+        "num_retries": int(os.getenv("LLM_RETRIES", "3")),
+        "cache": os.getenv("LLM_CACHE", "true").lower() == "true",
+    }
     
-    print(f"🤖 Setting up {provider} LLM")
+    # Apply any kwargs overrides (including api_base if provided)
+    config.update(kwargs)
     
-    # Set up DSPy logging if DSPY_DEBUG is enabled
-    if debug:
+    # Debug logging if enabled
+    debug_enabled = os.getenv("DSPY_DEBUG", "false").lower() == "true"
+    if debug_enabled:
         logging.getLogger("dspy").setLevel(logging.DEBUG)
-        print(f"   🔍 DSPy debug logging: ENABLED")
-        print(f"   💡 Use dspy.inspect_history() to see prompts/responses")
+        logger.info(f"🤖 Setting up LLM: {model}")
+        logger.info(f"   Configuration: temperature={config['temperature']}, max_tokens={config['max_tokens']}")
+        logger.info(f"   Retries: {config['num_retries']}, Cache: {config['cache']}")
     
-    # Configure based on provider
-    if provider == "ollama":
-        model = os.getenv("OLLAMA_MODEL", "gemma3:27b")
-        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-        print(f"   Model: {model}")
-        print(f"   Base URL: {base_url}")
-        llm = dspy.LM(
-            model=f"ollama/{model}",
-            api_base=base_url,
-            temperature=temperature,
-            max_tokens=max_tokens
-        )
-    elif provider == "claude":
-        model = os.getenv("CLAUDE_MODEL", "claude-3-opus-20240229")
-        print(f"   Model: {model}")
-        llm = dspy.LM(
-            model=f"anthropic/{model}",
-            temperature=temperature,
-            max_tokens=max_tokens
-        )
-    elif provider == "openai":
-        model = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
-        print(f"   Model: {model}")
-        llm = dspy.LM(
-            model=f"openai/{model}",
-            temperature=temperature,
-            max_tokens=max_tokens
-        )
-    elif provider == "gemini":
-        model = os.getenv("GEMINI_MODEL", "gemini-1.5-pro-latest")
-        print(f"   Model: {model}")
-        llm = dspy.LM(
-            model=f"gemini/{model}",
-            temperature=temperature,
-            max_tokens=max_tokens
-        )
-    else:
-        # Generic provider support using full model string
-        model = os.getenv("LLM_MODEL", f"{provider}/default-model")
-        print(f"   Model: {model}")
-        llm = dspy.LM(
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens
-        )
-    
-    # Test connection
+    # Create and configure the LLM
     try:
-        llm("Hello", max_tokens=100)
-        print(f"   ✅ {provider} connection successful")
+        llm = dspy.LM(model=model, **config)
+        dspy.settings.configure(lm=llm)
+        
+        # Test the connection with a minimal query
+        if debug_enabled:
+            logger.info(f"   Testing {model} connection...")
+            llm("test", max_tokens=10)
+            logger.info(f"   ✅ {model} connection successful")
+        
+        return llm
+        
     except Exception as e:
-        print(f"   ❌ {provider} connection failed: {e}")
-        if provider == "claude":
-            print("   💡 Make sure ANTHROPIC_API_KEY is set in your environment or cloud.env")
-        elif provider == "openai":
-            print("   💡 Make sure OPENAI_API_KEY is set in your environment or cloud.env")
-        elif provider == "gemini":
-            print("   💡 Make sure GOOGLE_API_KEY is set in your environment or cloud.env")
+        # Provide helpful error messages for common issues
+        error_msg = str(e)
+        if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
+            provider = model.split("/")[0] if "/" in model else "unknown"
+            api_key_map = {
+                "openai": "OPENAI_API_KEY",
+                "anthropic": "ANTHROPIC_API_KEY",
+                "gemini": "GOOGLE_API_KEY",
+                "cohere": "COHERE_API_KEY",
+                "replicate": "REPLICATE_API_TOKEN",
+            }
+            if provider in api_key_map:
+                logger.error(f"❌ Authentication failed. Please set {api_key_map[provider]} in your environment or .env file")
+            else:
+                logger.error(f"❌ Authentication failed for {provider}. Please check your API key configuration")
+        elif "connection" in error_msg.lower() and "ollama" in model.lower():
+            logger.error(f"❌ Could not connect to Ollama. Make sure Ollama is running and OLLAMA_BASE_URL is set correctly")
+        else:
+            logger.error(f"❌ Failed to initialize {model}: {error_msg}")
         raise
-    
-    # Configure DSPy
-    dspy.settings.configure(lm=llm)
-    
-    return llm
 
 
 def extract_messages(history_entries: List[Dict[str, Any]], n: Optional[int] = None) -> LLMHistory:
@@ -253,7 +265,7 @@ def save_dspy_history(
     n_entries: Optional[int] = 1,
     output_dir: str = "prompts_out",
     history: Optional[LLMHistory] = None
-) -> str:
+) -> Optional[str]:
     """
     Extract and save the last N DSPy history entries to a JSON file.
     
@@ -266,7 +278,7 @@ def save_dspy_history(
         history: Optional pre-extracted LLMHistory object. If not provided, will extract from GLOBAL_HISTORY
         
     Returns:
-        Path to the saved JSON file
+        Path to the saved JSON file, or None if no history to save
     """
     # Create output directory if it doesn't exist
     output_path = Path(output_dir)
@@ -301,5 +313,3 @@ def get_full_history() -> LLMHistory:
     """
     from dspy.clients.base_lm import GLOBAL_HISTORY
     return extract_messages(GLOBAL_HISTORY)
-
-

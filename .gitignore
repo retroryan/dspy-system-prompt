@@ -19,16 +19,6 @@
 config/secrets.yml
 config/database.yml
 
-# Cloud provider configuration files
-claude.env
-openai.env
-cloud.env
-cloud_test.env
-ollama.env
-aws.env
-gcp.env
-azure.env
-
 # ============================================================================
 # PYTHON
 # ============================================================================
@@ -215,50 +205,8 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
-# ============================================================================
-# WINDOWS
-# ============================================================================
-# Windows thumbnail cache files
-Thumbs.db
-Thumbs.db:encryptable
-ehthumbs.db
-ehthumbs_vista.db
 
-# Dump file
-*.stackdump
 
-# Folder config file
-[Dd]esktop.ini
-
-# Recycle Bin used on file shares
-$RECYCLE.BIN/
-
-# Windows Installer files
-*.cab
-*.msi
-*.msix
-*.msm
-*.msp
-
-# Windows shortcuts
-*.lnk
-
-# ============================================================================
-# LINUX
-# ============================================================================
-*~
-
-# temporary files which can be created if a process still has a handle open of a deleted file
-.fuse_hidden*
-
-# KDE directory preferences
-.directory
-
-# Linux trash folder which might appear on any partition or disk
-.Trash-*
-
-# .nfs files are created when an open file is removed but is still being accessed
-.nfs*
 
 # ============================================================================
 # IDE AND EDITORS
@@ -274,87 +222,7 @@ out/
 .vscode/
 *.code-workspace
 
-# Sublime Text
-*.sublime-project
-*.sublime-workspace
 
-# Vim
-*~
-*.swp
-*.swo
-*~
-.netrwhist
-
-# Emacs
-*~
-\#*\#
-/.emacs.desktop
-/.emacs.desktop.lock
-*.elc
-auto-save-list
-tramp
-.\#*
-
-# Atom
-.atom/
-
-# Eclipse
-.metadata
-bin/
-tmp/
-*.tmp
-*.bak
-*.swp
-*~.nib
-local.properties
-.settings/
-.loadpath
-.recommenders
-
-# External tool builders
-.externalToolBuilders/
-
-# Locally stored "Eclipse launch configurations"
-*.launch
-
-# PyDev specific (Python IDE for Eclipse)
-*.pydevproject
-
-# CDT-specific (C/C++ Development Tooling)
-.cproject
-
-# CDT- autotools
-.autotools
-
-# Java annotation processor (APT)
-.factorypath
-
-# PDT-specific (PHP Development Tools)
-.buildpath
-
-# sbteclipse plugin
-.target
-
-# Tern plugin
-.tern-project
-
-# TeXlipse plugin
-.texlipse
-
-# STS (Spring Tool Suite)
-.springBeans
-
-# Code Recommenders
-.recommenders/
-
-# Annotation Processing
-.apt_generated/
-.apt_generated_test/
-
-# Scala IDE specific (Scala & Java development for Eclipse)
-.cache-main
-.scala_dependencies
-.worksheet
 
 # ============================================================================
 # PROJECT SPECIFIC
@@ -365,26 +233,18 @@ results/
 output/
 outputs/
 logs/
-*.log
 
 # Generated files
 prompts_out/
 debug_history.json
-debug_dspy_history.py
-debug_token_capture.py
 test_history_*.json
-test_history_*.py
 
 # History and backup files
 .history/
 *.backup
-*.bak
-*~
 
 # Temporary files
-tmp/
 temp/
-*.tmp
 
 # Data files (if they contain sensitive information)
 # Uncomment if your data files contain sensitive information
@@ -419,7 +279,6 @@ DRAFT*.md
 
 # Runtime data
 pids
-*.pid
 *.seed
 *.pid.lock
 
@@ -461,7 +320,6 @@ node_modules/
 .yarn-integrity
 
 # parcel-bundler cache (https://parceljs.org/)
-.cache
 .parcel-cache
 
 # Next.js build output
@@ -479,19 +337,6 @@ public
 .out
 .storybook-out
 
-# Temporary folders
-tmp/
-temp/
-
-# ============================================================================
-# CLOUD AND DEPLOYMENT
-# ============================================================================
-# Terraform
-*.tfstate
-*.tfstate.*
-.terraform/
-.terraform.lock.hcl
-
 # Docker
 .dockerignore
 Dockerfile.local
@@ -505,16 +350,6 @@ Dockerfile.local
 # AWS
 .aws/
 
-# Google Cloud
-.gcloud/
-
-# ============================================================================
-# DATABASES
-# ============================================================================
-# SQLite
-*.db
-*.sqlite
-*.sqlite3
 
 # PostgreSQL
 *.pgsql
@@ -522,52 +357,16 @@ Dockerfile.local
 # MySQL
 *.mysql
 
-# ============================================================================
-# MISCELLANEOUS
-# ============================================================================
-# Backup files
-*.backup
-*.bak
-*~
-
 # Archive files
 *.zip
 *.tar.gz
 *.rar
 *.7z
 
-# Image files (if not needed in repo)
-# *.jpg
-# *.jpeg
-# *.png
-# *.gif
-# *.bmp
-# *.tiff
-# *.svg
-
-# Video files
-*.mp4
-*.avi
-*.mov
-*.wmv
-*.flv
-
-# Audio files
-*.mp3
-*.wav
-*.flac
-*.aac
-
-# Large files
-*.iso
-*.dmg
-*.pkg
 
 # OS generated files
 .DS_Store?
-ehthumbs.db
 Icon?
-Thumbs.db
 
 # ============================================================================
 # END OF .gitignore

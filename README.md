@@ -21,18 +21,14 @@ The implementation features:
 ### Setup
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/retroryan/dspy-system-prompt
-cd dspy-system-prompt
-
-# 2. Install dependencies
+# 1. Install dependencies
 poetry install
 
-# 3. Copy environment file
+# 2. Copy environment file
 cp .env.sample .env
 # Edit .env to add your API keys if using cloud providers
 
-# 4. (Optional) For Ollama: pull the model
+# 3. (Optional) For Ollama: pull the model
 ollama pull gemma3:27b
 ```
 
