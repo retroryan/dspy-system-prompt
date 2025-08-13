@@ -117,14 +117,21 @@ class TestDatabaseOperations:
         initial_inv = self.manager.get_product_inventory("TEST001")
         
         # Try to checkout with an invalid operation that will fail
-        # We'll patch the commit_inventory to always fail
-        original_commit = self.manager.commit_inventory
-        self.manager.commit_inventory = lambda p, q: False
+        # We'll simulate failure by reducing stock to 0 after reservation
+        with self.manager.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE inventory SET stock_quantity = 0 WHERE product_id = 'TEST001'
+            """)
         
         result = self.manager.checkout_cart(user_id, "123 Test St")
         
-        # Restore original method
-        self.manager.commit_inventory = original_commit
+        # Restore stock
+        with self.manager.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE inventory SET stock_quantity = 50 WHERE product_id = 'TEST001'
+            """)
         
         # Checkout should have failed
         assert result['status'] == 'failed'
@@ -142,26 +149,18 @@ class TestDatabaseOperations:
         user1 = "user1"
         user2 = "user2"
         
-        # Both users add same product simultaneously
+        # TEST001 has 90 stock (100 - 1*10)
+        # Both users try to add 50 items each (total 100, but only 90 available)
         result1 = self.manager.add_to_cart(user1, "TEST001", 50)
         result2 = self.manager.add_to_cart(user2, "TEST001", 50)
         
-        # Both should succeed if enough stock
-        initial_stock = 100  # TEST001 has 100 stock
+        # First should succeed, second should fail (only 90 in stock)
+        assert result1['status'] == 'success'
+        assert result2['status'] == 'failed'  # Not enough stock
         
-        if initial_stock >= 100:
-            assert result1['status'] == 'success'
-            assert result2['status'] == 'success'
-            
-            # Check inventory is correctly reserved
-            inv = self.manager.get_product_inventory("TEST001")
-            assert inv['reserved_quantity'] == 100
-        else:
-            # One should fail due to insufficient stock
-            success_count = sum([
-                1 for r in [result1, result2] if r['status'] == 'success'
-            ])
-            assert success_count == 1, "Expected exactly one success with limited stock"
+        # Check inventory is correctly reserved
+        inv = self.manager.get_product_inventory("TEST001")
+        assert inv['reserved_quantity'] == 50  # Only first user's reservation
     
     def test_index_usage(self):
         """Test that indexes are created and can be used."""

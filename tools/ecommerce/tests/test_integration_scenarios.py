@@ -147,16 +147,25 @@ class TestIntegrationScenarios:
         initial_laptop_inv = self.manager.get_product_inventory("LAPTOP")
         initial_mouse_inv = self.manager.get_product_inventory("MOUSE")
         
-        # Simulate crash during checkout by patching commit to fail
-        original_commit = self.manager.commit_inventory
-        self.manager.commit_inventory = lambda p, q: False
+        # Simulate crash by making stock insufficient during checkout
+        # This will cause checkout to fail with rollback
+        with self.manager.get_connection() as conn:
+            cursor = conn.cursor()
+            # Set LAPTOP stock to 0 to cause failure
+            cursor.execute("""
+                UPDATE inventory SET stock_quantity = 0 WHERE product_id = 'LAPTOP'
+            """)
         
-        # Attempt checkout (will fail)
+        # Attempt checkout (will fail due to insufficient stock)
         result = self.manager.checkout_cart(user_id, "123 Test St")
         assert result['status'] == 'failed'
         
-        # Restore normal operation
-        self.manager.commit_inventory = original_commit
+        # Restore stock levels
+        with self.manager.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE inventory SET stock_quantity = 10 WHERE product_id = 'LAPTOP'
+            """)
         
         # Verify inventory wasn't changed (transaction rolled back)
         laptop_inv = self.manager.get_product_inventory("LAPTOP")
@@ -214,8 +223,19 @@ class TestIntegrationScenarios:
         monitor_inv = self.manager.get_product_inventory("MONITOR")
         assert monitor_inv['reserved_quantity'] == 1
         
-        # Simulate cart abandonment (cleanup after 0 hours for test)
-        cleanup_result = self.manager.cleanup_abandoned_carts(hours=0)
+        # Make cart old to simulate abandonment
+        from datetime import datetime, timedelta
+        with self.manager.get_connection() as conn:
+            cursor = conn.cursor()
+            old_time = datetime.now() - timedelta(hours=2)
+            cursor.execute("""
+                UPDATE carts 
+                SET updated_at = ? 
+                WHERE user_id = ? AND status = 'active'
+            """, (old_time, user_id))
+        
+        # Cleanup carts older than 1 hour
+        cleanup_result = self.manager.cleanup_abandoned_carts(hours=1)
         assert cleanup_result['carts_cleaned'] >= 1
         
         # Verify inventory released

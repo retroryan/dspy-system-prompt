@@ -12,53 +12,31 @@ from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
 from contextlib import contextmanager
-from dataclasses import dataclass, asdict
-
-
-@dataclass
-class CartItem:
-    """Represents an item in a shopping cart."""
-    product_id: str
-    quantity: int
-    price: float
-    product_name: str
-    subtotal: float
-
-
-@dataclass
-class Cart:
-    """Represents a user's shopping cart."""
-    cart_id: int
-    user_id: str
-    items: List[CartItem]
-    total: float
-    item_count: int
-    created_at: datetime
-    updated_at: datetime
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert cart to dictionary for JSON serialization."""
-        return {
-            'cart_id': self.cart_id,
-            'user_id': self.user_id,
-            'items': [asdict(item) for item in self.items],
-            'total': self.total,
-            'item_count': self.item_count,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
-        }
+from .models import (
+    Cart, CartItem, 
+    AddToCartOutput, RemoveFromCartOutput, UpdateCartItemOutput,
+    ClearCartOutput, CheckoutOutput, Order, OrderItem, OrderSummary,
+    UpdateOrderStatusOutput, CreateReturnOutput, ProcessReturnOutput,
+    InventoryStatus, UpdateStockOutput, StatsOutput, CleanupCartsOutput
+)
 
 
 class CartInventoryManager:
     """Manages cart and inventory operations with SQLite persistence."""
     
-    def __init__(self, db_path: str = "ecommerce_demo.db"):
+    def __init__(self, db_path: str = None):
         """Initialize the manager with a database connection.
         
         Args:
-            db_path: Path to SQLite database file
+            db_path: Path to SQLite database file (defaults to tools/db_files/ecommerce_demo.db)
         """
-        self.db_path = Path(db_path)
+        if db_path is None:
+            # Default to tools/db_files directory
+            db_dir = Path(__file__).parent.parent / "db_files"
+            db_dir.mkdir(exist_ok=True)
+            self.db_path = db_dir / "ecommerce_demo.db"
+        else:
+            self.db_path = Path(db_path)
         self.products_file = Path(__file__).parent.parent / "data" / "products.json"
         self.init_database()
     
@@ -405,14 +383,14 @@ class CartInventoryManager:
         
         print("Database reset complete with demo data")
     
-    def get_stats(self, user_id: Optional[str] = None) -> Dict[str, Any]:
+    def get_stats(self, user_id: Optional[str] = None) -> StatsOutput:
         """Get statistics about carts and orders.
         
         Args:
             user_id: Optional user filter
             
         Returns:
-            Dict with various statistics
+            StatsOutput with various statistics
         """
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -480,7 +458,7 @@ class CartInventoryManager:
                 cursor.execute("SELECT COUNT(*) as count FROM returns WHERE status = 'pending'")
             stats['pending_returns'] = cursor.fetchone()['count']
             
-            return stats
+            return StatsOutput(**stats)
     
     # =============================================================================
     # Phase 2: Cart Management Methods
@@ -518,7 +496,7 @@ class CartInventoryManager:
             
             return cursor.lastrowid
     
-    def add_to_cart(self, user_id: str, product_id: str, quantity: int) -> Dict[str, Any]:
+    def add_to_cart(self, user_id: str, product_id: str, quantity: int) -> AddToCartOutput:
         """Add product to user's cart with inventory validation.
         
         Args:
@@ -527,12 +505,15 @@ class CartInventoryManager:
             quantity: Quantity to add
             
         Returns:
-            Result dict with cart status and any errors
+            AddToCartOutput with cart status and any errors
         """
         # Get product details
         product = self.get_product_by_id(product_id)
         if not product:
-            return {"error": f"Product {product_id} not found", "status": "failed"}
+            return AddToCartOutput(
+                error=f"Product {product_id} not found", 
+                status="failed"
+            )
         
         try:
             with self.get_connection() as conn:
@@ -546,13 +527,13 @@ class CartInventoryManager:
                     """, (product_id,))
                     inv = cursor.fetchone()
                     available = (inv['stock_quantity'] - inv['reserved_quantity']) if inv else 0
-                    return {
-                        "error": f"Insufficient stock. Only {available} items available.",
-                        "product_id": product_id,
-                        "requested_quantity": quantity,
-                        "available_stock": available,
-                        "status": "failed"
-                    }
+                    return AddToCartOutput(
+                        error=f"Insufficient stock. Only {available} items available.",
+                        product_id=product_id,
+                        requested_quantity=quantity,
+                        available_stock=available,
+                        status="failed"
+                    )
                 
                 # Get or create cart
                 cart_id = self.get_or_create_cart(user_id)
@@ -571,13 +552,13 @@ class CartInventoryManager:
                     
                     # Check total availability
                     if not self.check_availability(product_id, new_quantity):
-                        return {
-                            "error": "Cannot add more - insufficient stock",
-                            "product_id": product_id,
-                            "current_in_cart": existing['quantity'],
-                            "requested_additional": quantity,
-                            "status": "failed"
-                        }
+                        return AddToCartOutput(
+                            error="Cannot add more - insufficient stock",
+                            product_id=product_id,
+                            current_in_cart=existing['quantity'],
+                            requested_additional=quantity,
+                            status="failed"
+                        )
                     
                     # Release old reservation
                     self.release_inventory(product_id, existing['quantity'])
@@ -594,11 +575,11 @@ class CartInventoryManager:
                 else:
                     # Reserve inventory
                     if not self.reserve_inventory(product_id, quantity):
-                        return {
-                            "error": "Failed to reserve inventory",
-                            "product_id": product_id,
-                            "status": "failed"
-                        }
+                        return AddToCartOutput(
+                            error="Failed to reserve inventory",
+                            product_id=product_id,
+                            status="failed"
+                        )
                     
                     # Add new item to cart
                     cursor.execute("""
@@ -623,21 +604,21 @@ class CartInventoryManager:
                 
                 totals = cursor.fetchone()
                 
-                return {
-                    "cart_id": cart_id,
-                    "cart_total": totals['total_items'] or 0,
-                    "cart_value": float(totals['total'] or 0),
-                    "added": product_id,
-                    "product_name": product['name'],
-                    "price": product['price'],
-                    "quantity": quantity,
-                    "status": "success"
-                }
+                return AddToCartOutput(
+                    cart_id=cart_id,
+                    cart_total=totals['total_items'] or 0,
+                    cart_value=float(totals['total'] or 0),
+                    added=product_id,
+                    product_name=product['name'],
+                    price=product['price'],
+                    quantity=quantity,
+                    status="success"
+                )
                 
         except Exception as e:
-            return {"error": str(e), "status": "failed"}
+            return AddToCartOutput(error=str(e), status="failed")
     
-    def remove_from_cart(self, user_id: str, product_id: str, quantity: Optional[int] = None) -> Dict[str, Any]:
+    def remove_from_cart(self, user_id: str, product_id: str, quantity: Optional[int] = None) -> RemoveFromCartOutput:
         """Remove product from cart (partial or complete).
         
         Args:
@@ -646,7 +627,7 @@ class CartInventoryManager:
             quantity: Optional quantity to remove (None = remove all)
             
         Returns:
-            Result dict with updated cart status
+            RemoveFromCartOutput with updated cart status
         """
         try:
             with self.get_connection() as conn:
@@ -662,7 +643,7 @@ class CartInventoryManager:
                 
                 cart_result = cursor.fetchone()
                 if not cart_result:
-                    return {"error": "No active cart found", "status": "failed"}
+                    return RemoveFromCartOutput(error="No active cart found", status="failed")
                 
                 cart_id = cart_result['cart_id']
                 
@@ -674,7 +655,7 @@ class CartInventoryManager:
                 
                 item = cursor.fetchone()
                 if not item:
-                    return {"error": f"Product {product_id} not in cart", "status": "failed"}
+                    return RemoveFromCartOutput(error=f"Product {product_id} not in cart", status="failed")
                 
                 current_quantity = item['quantity']
                 
@@ -685,8 +666,13 @@ class CartInventoryManager:
                         WHERE cart_id = ? AND product_id = ?
                     """, (cart_id, product_id))
                     
-                    # Release all reserved inventory
-                    self.release_inventory(product_id, current_quantity)
+                    # Release all reserved inventory in same transaction
+                    cursor.execute("""
+                        UPDATE inventory 
+                        SET reserved_quantity = MAX(0, reserved_quantity - ?),
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE product_id = ?
+                    """, (current_quantity, product_id))
                     
                     removed_quantity = current_quantity
                 else:
@@ -697,8 +683,13 @@ class CartInventoryManager:
                         WHERE cart_id = ? AND product_id = ?
                     """, (new_quantity, cart_id, product_id))
                     
-                    # Release partial inventory
-                    self.release_inventory(product_id, quantity)
+                    # Release partial inventory in same transaction
+                    cursor.execute("""
+                        UPDATE inventory 
+                        SET reserved_quantity = MAX(0, reserved_quantity - ?),
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE product_id = ?
+                    """, (quantity, product_id))
                     
                     removed_quantity = quantity
                 
@@ -708,17 +699,17 @@ class CartInventoryManager:
                     WHERE cart_id = ?
                 """, (cart_id,))
                 
-                return {
-                    "cart_id": cart_id,
-                    "removed": product_id,
-                    "quantity_removed": removed_quantity,
-                    "status": "success"
-                }
+                return RemoveFromCartOutput(
+                    cart_id=cart_id,
+                    removed=product_id,
+                    quantity_removed=removed_quantity,
+                    status="success"
+                )
                 
         except Exception as e:
-            return {"error": str(e), "status": "failed"}
+            return RemoveFromCartOutput(error=str(e), status="failed")
     
-    def update_cart_item(self, user_id: str, product_id: str, new_quantity: int) -> Dict[str, Any]:
+    def update_cart_item(self, user_id: str, product_id: str, new_quantity: int) -> UpdateCartItemOutput:
         """Update quantity of item in cart.
         
         Args:
@@ -727,7 +718,7 @@ class CartInventoryManager:
             new_quantity: New quantity (0 removes item)
             
         Returns:
-            Result dict with updated cart status
+            UpdateCartItemOutput with updated cart status
         """
         if new_quantity == 0:
             return self.remove_from_cart(user_id, product_id)
@@ -754,12 +745,12 @@ class CartInventoryManager:
                 
                 # Check availability for new quantity
                 if not self.check_availability(product_id, new_quantity):
-                    return {
-                        "error": "Insufficient stock for requested quantity",
-                        "product_id": product_id,
-                        "requested": new_quantity,
-                        "status": "failed"
-                    }
+                    return UpdateCartItemOutput(
+                        error="Insufficient stock for requested quantity",
+                        product_id=product_id,
+                        requested=new_quantity,
+                        status="failed"
+                    )
                 
                 # Update inventory reservations
                 self.release_inventory(product_id, current_quantity)
@@ -777,16 +768,16 @@ class CartInventoryManager:
                     WHERE cart_id = ?
                 """, (cart_id,))
                 
-                return {
-                    "cart_id": cart_id,
-                    "product_id": product_id,
-                    "old_quantity": current_quantity,
-                    "new_quantity": new_quantity,
-                    "status": "success"
-                }
+                return UpdateCartItemOutput(
+                    cart_id=cart_id,
+                    product_id=product_id,
+                    old_quantity=current_quantity,
+                    new_quantity=new_quantity,
+                    status="success"
+                )
                 
         except Exception as e:
-            return {"error": str(e), "status": "failed"}
+            return UpdateCartItemOutput(error=str(e), status="failed")
     
     def get_cart(self, user_id: str) -> Cart:
         """Get current cart contents for user.
@@ -859,14 +850,14 @@ class CartInventoryManager:
                 updated_at=datetime.fromisoformat(cart_data['updated_at'])
             )
     
-    def clear_cart(self, user_id: str) -> Dict[str, Any]:
+    def clear_cart(self, user_id: str) -> ClearCartOutput:
         """Clear all items from user's cart.
         
         Args:
             user_id: User identifier
             
         Returns:
-            Result dict confirming cart cleared
+            ClearCartOutput confirming cart cleared
         """
         try:
             with self.get_connection() as conn:
@@ -882,7 +873,7 @@ class CartInventoryManager:
                 
                 cart_result = cursor.fetchone()
                 if not cart_result:
-                    return {"message": "No active cart to clear", "status": "success"}
+                    return ClearCartOutput(message="No active cart to clear", status="success")
                 
                 cart_id = cart_result['cart_id']
                 
@@ -895,9 +886,14 @@ class CartInventoryManager:
                 
                 items = cursor.fetchall()
                 
-                # Release all inventory
+                # Release all inventory in same transaction
                 for item in items:
-                    self.release_inventory(item['product_id'], item['quantity'])
+                    cursor.execute("""
+                        UPDATE inventory 
+                        SET reserved_quantity = MAX(0, reserved_quantity - ?),
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE product_id = ?
+                    """, (item['quantity'], item['product_id']))
                 
                 # Delete all cart items
                 cursor.execute("""
@@ -911,14 +907,14 @@ class CartInventoryManager:
                     WHERE cart_id = ?
                 """, (cart_id,))
                 
-                return {
-                    "cart_id": cart_id,
-                    "items_cleared": len(items),
-                    "status": "success"
-                }
+                return ClearCartOutput(
+                    cart_id=cart_id,
+                    items_cleared=len(items),
+                    status="success"
+                )
                 
         except Exception as e:
-            return {"error": str(e), "status": "failed"}
+            return ClearCartOutput(error=str(e), status="failed")
     
     # =============================================================================
     # Phase 2: Inventory Management Methods
@@ -1043,7 +1039,7 @@ class CartInventoryManager:
             print(f"Commit inventory error: {e}")
             return False
     
-    def update_stock(self, product_id: str, new_stock: int) -> Dict[str, Any]:
+    def update_stock(self, product_id: str, new_stock: int) -> UpdateStockOutput:
         """Update total stock for a product.
         
         Args:
@@ -1051,7 +1047,7 @@ class CartInventoryManager:
             new_stock: New stock level
             
         Returns:
-            Result dict with updated stock info
+            UpdateStockOutput with updated stock info
         """
         try:
             with self.get_connection() as conn:
@@ -1072,22 +1068,22 @@ class CartInventoryManager:
                         VALUES (?, ?, 0)
                     """, (product_id, new_stock))
                 
-                return {
-                    "product_id": product_id,
-                    "new_stock": new_stock,
-                    "status": "success"
-                }
+                return UpdateStockOutput(
+                    product_id=product_id,
+                    new_stock=new_stock,
+                    status="success"
+                )
         except Exception as e:
-            return {"error": str(e), "status": "failed"}
+            return UpdateStockOutput(error=str(e), status="failed")
     
-    def get_product_inventory(self, product_id: str) -> Dict[str, Any]:
+    def get_product_inventory(self, product_id: str) -> InventoryStatus:
         """Get current inventory status for a product.
         
         Args:
             product_id: Product to check
             
         Returns:
-            Dict with stock_quantity, reserved_quantity, available_quantity
+            InventoryStatus with stock quantities
         """
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -1100,27 +1096,30 @@ class CartInventoryManager:
             
             result = cursor.fetchone()
             if not result:
-                return {
-                    "product_id": product_id,
-                    "stock_quantity": 0,
-                    "reserved_quantity": 0,
-                    "available_quantity": 0,
-                    "last_restocked": None
-                }
+                return InventoryStatus(
+                    product_id=product_id,
+                    stock_quantity=0,
+                    reserved_quantity=0,
+                    available_quantity=0,
+                    last_restocked=None
+                )
             
-            return {
-                "product_id": product_id,
-                "stock_quantity": result['stock_quantity'],
-                "reserved_quantity": result['reserved_quantity'],
-                "available_quantity": result['stock_quantity'] - result['reserved_quantity'],
-                "last_restocked": result['last_restocked']
-            }
+            return InventoryStatus(
+                product_id=product_id,
+                stock_quantity=result['stock_quantity'],
+                reserved_quantity=result['reserved_quantity'],
+                available_quantity=result['stock_quantity'] - result['reserved_quantity'],
+                last_restocked=result['last_restocked']
+            )
     
-    def cleanup_abandoned_carts(self, hours: int = 24):
+    def cleanup_abandoned_carts(self, hours: int = 24) -> CleanupCartsOutput:
         """Clean up carts that have been abandoned.
         
         Args:
             hours: Number of hours before cart considered abandoned
+            
+        Returns:
+            CleanupCartsOutput with cleanup results
         """
         try:
             with self.get_connection() as conn:
@@ -1139,9 +1138,14 @@ class CartInventoryManager:
                 
                 abandoned_items = cursor.fetchall()
                 
-                # Release inventory for abandoned items
+                # Release inventory for abandoned items in same transaction
                 for item in abandoned_items:
-                    self.release_inventory(item['product_id'], item['quantity'])
+                    cursor.execute("""
+                        UPDATE inventory 
+                        SET reserved_quantity = MAX(0, reserved_quantity - ?),
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE product_id = ?
+                    """, (item['quantity'], item['product_id']))
                 
                 # Mark carts as abandoned
                 cursor.execute("""
@@ -1151,20 +1155,20 @@ class CartInventoryManager:
                     AND updated_at < ?
                 """, (cutoff_time,))
                 
-                return {
-                    "carts_cleaned": cursor.rowcount,
-                    "items_released": len(abandoned_items),
-                    "status": "success"
-                }
+                return CleanupCartsOutput(
+                    carts_cleaned=cursor.rowcount,
+                    items_released=len(abandoned_items),
+                    status="success"
+                )
                 
         except Exception as e:
-            return {"error": str(e), "status": "failed"}
+            return CleanupCartsOutput(error=str(e), status="failed")
     
     # =============================================================================
     # Phase 3: Order Management Methods
     # =============================================================================
     
-    def checkout_cart(self, user_id: str, shipping_address: str) -> Dict[str, Any]:
+    def checkout_cart(self, user_id: str, shipping_address: str) -> CheckoutOutput:
         """Convert cart to order and commit inventory.
         
         Args:
@@ -1172,7 +1176,7 @@ class CartInventoryManager:
             shipping_address: Shipping address for order
             
         Returns:
-            Result dict with order details or error
+            CheckoutOutput with order details or error
         """
         try:
             with self.get_connection() as conn:
@@ -1181,7 +1185,7 @@ class CartInventoryManager:
                 # Get active cart
                 cart = self.get_cart(user_id)
                 if not cart.items:
-                    return {"error": "Cart is empty", "status": "failed"}
+                    return CheckoutOutput(error="Cart is empty", status="failed")
                 
                 # Generate order ID
                 cursor.execute("SELECT COUNT(*) as count FROM orders")
@@ -1230,20 +1234,20 @@ class CartInventoryManager:
                     DELETE FROM cart_items WHERE cart_id = ?
                 """, (cart.cart_id,))
                 
-                return {
-                    "order_id": order_id,
-                    "user_id": user_id,
-                    "total": float(cart.total),
-                    "items": len(cart.items),
-                    "status": "processing",
-                    "shipping_address": shipping_address,
-                    "message": "Order placed successfully"
-                }
+                return CheckoutOutput(
+                    order_id=order_id,
+                    user_id=user_id,
+                    total=float(cart.total),
+                    items=len(cart.items),
+                    status="success",
+                    shipping_address=shipping_address,
+                    message="Order placed successfully"
+                )
                 
         except Exception as e:
-            return {"error": str(e), "status": "failed"}
+            return CheckoutOutput(error=str(e), status="failed")
     
-    def get_order(self, user_id: str, order_id: str) -> Dict[str, Any]:
+    def get_order(self, user_id: str, order_id: str) -> Optional[Order]:
         """Get order details.
         
         Args:
@@ -1251,7 +1255,7 @@ class CartInventoryManager:
             order_id: Order to retrieve
             
         Returns:
-            Order details dict
+            Order object or None if not found
         """
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -1269,7 +1273,7 @@ class CartInventoryManager:
             
             order = cursor.fetchone()
             if not order:
-                return {"error": f"Order {order_id} not found for user {user_id}"}
+                return None
             
             # Get order items
             cursor.execute("""
@@ -1281,27 +1285,27 @@ class CartInventoryManager:
             items = []
             for row in cursor.fetchall():
                 product = self.get_product_by_id(row['product_id'])
-                items.append({
-                    "product_id": row['product_id'],
-                    "product_name": product['name'] if product else "Unknown",
-                    "quantity": row['quantity'],
-                    "unit_price": float(row['unit_price']),
-                    "subtotal": float(row['subtotal'])
-                })
+                items.append(OrderItem(
+                    product_id=row['product_id'],
+                    product_name=product['name'] if product else "Unknown",
+                    quantity=row['quantity'],
+                    unit_price=float(row['unit_price']),
+                    subtotal=float(row['subtotal'])
+                ))
             
-            return {
-                "order_id": order['order_id'],
-                "user_id": order['user_id'],
-                "status": order['status'],
-                "total": float(order['total_amount']),
-                "shipping_address": order['shipping_address'],
-                "created_at": order['created_at'],
-                "items": items,
-                "item_count": order['item_count'],
-                "total_items": order['total_items']
-            }
+            return Order(
+                order_id=order['order_id'],
+                user_id=order['user_id'],
+                status=order['status'],
+                total=float(order['total_amount']),
+                shipping_address=order['shipping_address'],
+                created_at=order['created_at'],
+                items=items,
+                item_count=order['item_count'],
+                total_items=order['total_items']
+            )
     
-    def list_orders(self, user_id: str, status: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list_orders(self, user_id: str, status: Optional[str] = None) -> List[OrderSummary]:
         """List orders for user.
         
         Args:
@@ -1309,7 +1313,7 @@ class CartInventoryManager:
             status: Optional status filter
             
         Returns:
-            List of order summaries
+            List of OrderSummary objects
         """
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -1337,18 +1341,18 @@ class CartInventoryManager:
             
             orders = []
             for row in cursor.fetchall():
-                orders.append({
-                    "order_id": row['order_id'],
-                    "status": row['status'],
-                    "total": float(row['total_amount']),
-                    "created_at": row['created_at'],
-                    "shipping_address": row['shipping_address'],
-                    "item_count": row['item_count']
-                })
+                orders.append(OrderSummary(
+                    order_id=row['order_id'],
+                    status=row['status'],
+                    total=float(row['total_amount']),
+                    created_at=row['created_at'],
+                    shipping_address=row['shipping_address'],
+                    item_count=row['item_count']
+                ))
             
             return orders
     
-    def update_order_status(self, order_id: str, new_status: str) -> Dict[str, Any]:
+    def update_order_status(self, order_id: str, new_status: str) -> UpdateOrderStatusOutput:
         """Update order status (for tracking simulation).
         
         Args:
@@ -1356,11 +1360,11 @@ class CartInventoryManager:
             new_status: New status value
             
         Returns:
-            Result dict with updated order info
+            UpdateOrderStatusOutput with updated order info
         """
         valid_statuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled']
         if new_status not in valid_statuses:
-            return {"error": f"Invalid status. Must be one of: {valid_statuses}", "status": "failed"}
+            return UpdateOrderStatusOutput(error=f"Invalid status. Must be one of: {valid_statuses}", status="failed")
         
         try:
             with self.get_connection() as conn:
@@ -1374,7 +1378,7 @@ class CartInventoryManager:
                 """, (new_status, order_id))
                 
                 if cursor.rowcount == 0:
-                    return {"error": f"Order {order_id} not found", "status": "failed"}
+                    return UpdateOrderStatusOutput(error=f"Order {order_id} not found", status="failed")
                 
                 # If cancelled, release/restore inventory
                 if new_status == 'cancelled':
@@ -1394,16 +1398,16 @@ class CartInventoryManager:
                             WHERE product_id = ?
                         """, (item['quantity'], item['product_id']))
                 
-                return {
-                    "order_id": order_id,
-                    "new_status": new_status,
-                    "status": "success"
-                }
+                return UpdateOrderStatusOutput(
+                    order_id=order_id,
+                    new_status=new_status,
+                    status="success"
+                )
                 
         except Exception as e:
-            return {"error": str(e), "status": "failed"}
+            return UpdateOrderStatusOutput(error=str(e), status="failed")
     
-    def create_return(self, user_id: str, order_id: str, item_id: str, reason: str) -> Dict[str, Any]:
+    def create_return(self, user_id: str, order_id: str, item_id: str, reason: str) -> CreateReturnOutput:
         """Process return request.
         
         Args:
@@ -1413,7 +1417,7 @@ class CartInventoryManager:
             reason: Return reason
             
         Returns:
-            Result dict with return details
+            CreateReturnOutput with return details
         """
         try:
             with self.get_connection() as conn:
@@ -1427,10 +1431,10 @@ class CartInventoryManager:
                 
                 order = cursor.fetchone()
                 if not order:
-                    return {"error": "Order not found", "status": "failed"}
+                    return CreateReturnOutput(error="Order not found", status="failed")
                 
                 if order['status'] not in ['delivered', 'shipped']:
-                    return {"error": f"Cannot return order with status: {order['status']}", "status": "failed"}
+                    return CreateReturnOutput(error=f"Cannot return order with status: {order['status']}", status="failed")
                 
                 # Verify item exists in order
                 cursor.execute("""
@@ -1441,7 +1445,7 @@ class CartInventoryManager:
                 
                 item = cursor.fetchone()
                 if not item:
-                    return {"error": f"Item {item_id} not found in order", "status": "failed"}
+                    return CreateReturnOutput(error=f"Item {item_id} not found in order", status="failed")
                 
                 # Generate return ID
                 cursor.execute("SELECT COUNT(*) as count FROM returns")
@@ -1455,20 +1459,20 @@ class CartInventoryManager:
                     VALUES (?, ?, ?, ?, ?, 'pending', ?)
                 """, (return_id, order_id, user_id, item_id, reason, item['subtotal']))
                 
-                return {
-                    "return_id": return_id,
-                    "order_id": order_id,
-                    "item_id": item_id,
-                    "reason": reason,
-                    "refund_amount": float(item['subtotal']),
-                    "message": "Return request created",
-                    "status": "success"
-                }
+                return CreateReturnOutput(
+                    return_id=return_id,
+                    order_id=order_id,
+                    item_id=item_id,
+                    reason=reason,
+                    refund_amount=float(item['subtotal']),
+                    message="Return request created",
+                    status="success"
+                )
                 
         except Exception as e:
-            return {"error": str(e), "status": "failed"}
+            return CreateReturnOutput(error=str(e), status="failed")
     
-    def process_return(self, return_id: str, approve: bool = True) -> Dict[str, Any]:
+    def process_return(self, return_id: str, approve: bool = True) -> ProcessReturnOutput:
         """Process a return request (approve or reject).
         
         Args:
@@ -1476,7 +1480,7 @@ class CartInventoryManager:
             approve: Whether to approve the return
             
         Returns:
-            Result dict with processing outcome
+            ProcessReturnOutput with processing outcome
         """
         try:
             with self.get_connection() as conn:
@@ -1492,7 +1496,7 @@ class CartInventoryManager:
                 
                 ret = cursor.fetchone()
                 if not ret:
-                    return {"error": "Return request not found or already processed", "status": "failed"}
+                    return ProcessReturnOutput(error="Return request not found or already processed", status="failed")
                 
                 if approve:
                     # Approve return and restore inventory
@@ -1522,12 +1526,12 @@ class CartInventoryManager:
                     status = "rejected"
                     message = "Return request rejected."
                 
-                return {
-                    "return_id": return_id,
-                    "return_status": status,
-                    "message": message,
-                    "status": "success"
-                }
+                return ProcessReturnOutput(
+                    return_id=return_id,
+                    return_status=status,
+                    message=message,
+                    status="success"
+                )
                 
         except Exception as e:
-            return {"error": str(e), "status": "failed"}
+            return ProcessReturnOutput(error=str(e), status="failed")

@@ -276,8 +276,19 @@ class TestCartOperations:
         # Add items to cart
         self.manager.add_to_cart(user_id, "TEST001", 2)
         
-        # Clean up carts immediately (0 hours old)
-        result = self.manager.cleanup_abandoned_carts(hours=0)
+        # Manually update the cart timestamp to make it old
+        with self.manager.get_connection() as conn:
+            cursor = conn.cursor()
+            from datetime import datetime, timedelta
+            old_time = datetime.now() - timedelta(hours=2)
+            cursor.execute("""
+                UPDATE carts 
+                SET updated_at = ? 
+                WHERE user_id = ? AND status = 'active'
+            """, (old_time, user_id))
+        
+        # Clean up carts older than 1 hour
+        result = self.manager.cleanup_abandoned_carts(hours=1)
         assert result['status'] == 'success'
         assert result['carts_cleaned'] >= 1
         

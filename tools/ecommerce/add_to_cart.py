@@ -5,6 +5,7 @@ from typing import List, ClassVar, Dict, Any, Type
 from pydantic import BaseModel, Field, field_validator
 
 from shared.tool_utils.base_tool import BaseTool, ToolTestCase
+from .cart_inventory_manager import CartInventoryManager
 
 
 class AddToCartTool(BaseTool):
@@ -43,46 +44,17 @@ class AddToCartTool(BaseTool):
                 "note": f"Mock execution with placeholder: {product_id}"
             }
         
-        # Check if product exists in products.json
-        file_path = Path(__file__).resolve().parent.parent / "data" / "products.json"
-        if file_path.exists():
-            with open(file_path, "r") as file:
-                data = json.load(file)
-            
-            product_found = None
-            for product in data["products"]:
-                if product["id"] == product_id:
-                    product_found = product
-                    break
-            
-            if product_found:
-                # Check stock availability
-                available_stock = product_found.get("stock", 0)
-                if available_stock < quantity:
-                    return {
-                        "error": f"Insufficient stock. Only {available_stock} items available.",
-                        "product_id": product_id,
-                        "requested_quantity": quantity,
-                        "available_stock": available_stock
-                    }
-                
-                return {
-                    "cart_total": quantity,
-                    "added": product_id,
-                    "product_name": product_found["name"],
-                    "price": product_found["price"],
-                    "quantity": quantity,
-                    "total_price": product_found["price"] * quantity,
-                    "status": "success"
-                }
+        # Use CartInventoryManager for real operations
+        manager = CartInventoryManager()
         
-        # Default response if product not found or file doesn't exist
-        return {
-            "cart_total": quantity,
-            "added": product_id,
-            "quantity": quantity,
-            "status": "success"
-        }
+        # Default user_id for demo purposes - in production this would come from session
+        user_id = "demo_user"
+        
+        # Add to cart using the manager
+        result = manager.add_to_cart(user_id, product_id, quantity)
+        
+        # Convert Pydantic model to dict for response
+        return result.model_dump(exclude_none=True)
     
     @classmethod
     def get_test_cases(cls) -> List[ToolTestCase]:

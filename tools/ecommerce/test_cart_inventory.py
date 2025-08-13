@@ -16,10 +16,17 @@ def test_phase1():
     
     # Initialize manager with fresh database
     import os
-    if os.path.exists("test_phase1.db"):
-        os.remove("test_phase1.db")
+    from pathlib import Path
     
-    manager = CartInventoryManager("test_phase1.db")
+    # Use tools/db_files directory for test databases
+    db_dir = Path(__file__).parent.parent / "db_files"
+    db_dir.mkdir(exist_ok=True)
+    test_db = db_dir / "test_phase1.db"
+    
+    if test_db.exists():
+        test_db.unlink()
+    
+    manager = CartInventoryManager(str(test_db))
     print("✓ CartInventoryManager initialized")
     
     # Test database creation
@@ -50,16 +57,16 @@ def test_phase1():
     # Get statistics
     stats = manager.get_stats()
     print("\nDatabase Statistics:")
-    print(f"  Total orders: {stats['total_orders']}")
-    print(f"  Orders by status: {stats['orders_by_status']}")
-    print(f"  Active carts: {stats['active_carts']}")
-    print(f"  Inventory: {stats['inventory']}")
-    print(f"  Pending returns: {stats['pending_returns']}")
+    print(f"  Total orders: {stats.total_orders}")
+    print(f"  Orders by status: {stats.orders_by_status}")
+    print(f"  Active carts: {stats.active_carts}")
+    print(f"  Inventory: {stats.inventory}")
+    print(f"  Pending returns: {stats.pending_returns}")
     
     # Test user-specific stats
     user_stats = manager.get_stats('alice')
     print(f"\nStats for user 'alice':")
-    print(f"  Total orders: {user_stats['total_orders']}")
+    print(f"  Total orders: {user_stats.total_orders}")
     
     print("\n✓ Phase 1 testing complete!")
     
@@ -74,10 +81,17 @@ def test_phase2():
     
     # Initialize manager with fresh database
     import os
-    if os.path.exists("test_phase2.db"):
-        os.remove("test_phase2.db")
+    from pathlib import Path
     
-    manager = CartInventoryManager("test_phase2.db")
+    # Use tools/db_files directory for test databases
+    db_dir = Path(__file__).parent.parent / "db_files"
+    db_dir.mkdir(exist_ok=True)
+    test_db = db_dir / "test_phase2.db"
+    
+    if test_db.exists():
+        test_db.unlink()
+    
+    manager = CartInventoryManager(str(test_db))
     manager.reset_database()
     print("✓ Database reset with demo data")
     
@@ -89,20 +103,20 @@ def test_phase2():
     
     # Add first product
     result = manager.add_to_cart(user_id, "KB123", 2)
-    if result['status'] == 'success':
-        print(f"✓ Added 2x KB123 to cart: ${result['cart_value']:.2f}")
+    if result.status == 'success':
+        print(f"✓ Added 2x KB123 to cart: ${result.cart_value:.2f}")
     else:
-        print(f"✗ Failed to add KB123: {result['error']}")
+        print(f"✗ Failed to add KB123: {result.error}")
     
     # Add another product
     result = manager.add_to_cart(user_id, "MS456", 1)
-    if result['status'] == 'success':
-        print(f"✓ Added 1x MS456 to cart: ${result['cart_value']:.2f}")
+    if result.status == 'success':
+        print(f"✓ Added 1x MS456 to cart: ${result.cart_value:.2f}")
     
     # Try to add more than available
     result = manager.add_to_cart(user_id, "KB789", 100)  # Only 23 in stock
-    if result['status'] == 'failed':
-        print(f"✓ Correctly prevented overselling: {result['error']}")
+    if result.status == 'failed':
+        print(f"✓ Correctly prevented overselling: {result.error}")
     
     # Get cart contents
     cart = manager.get_cart(user_id)
@@ -119,34 +133,34 @@ def test_phase2():
     # Check inventory for KB123
     inv = manager.get_product_inventory("KB123")
     print(f"✓ KB123 Inventory:")
-    print(f"  Stock: {inv['stock_quantity']}")
-    print(f"  Reserved: {inv['reserved_quantity']}")
-    print(f"  Available: {inv['available_quantity']}")
+    print(f"  Stock: {inv.stock_quantity}")
+    print(f"  Reserved: {inv.reserved_quantity}")
+    print(f"  Available: {inv.available_quantity}")
     
     # Test removing from cart
     result = manager.remove_from_cart(user_id, "KB123", 1)
-    if result['status'] == 'success':
+    if result.status == 'success':
         print(f"\n✓ Removed 1x KB123 from cart")
     
     # Check inventory after removal
     inv = manager.get_product_inventory("KB123")
     print(f"✓ KB123 After removal:")
-    print(f"  Reserved: {inv['reserved_quantity']} (should be 1)")
+    print(f"  Reserved: {inv.reserved_quantity} (should be 1)")
     
     # Test updating cart item
     result = manager.update_cart_item(user_id, "MS456", 3)
-    if result['status'] == 'success':
+    if result.status == 'success':
         print(f"\n✓ Updated MS456 quantity to 3")
     
     # Test clearing cart
     result = manager.clear_cart(user_id)
-    if result['status'] == 'success':
-        print(f"\n✓ Cleared cart: {result['items_cleared']} items released")
+    if result.status == 'success':
+        print(f"\n✓ Cleared cart: {result.items_cleared} items released")
     
     # Verify inventory released
     inv = manager.get_product_inventory("KB123")
     print(f"✓ KB123 After cart clear:")
-    print(f"  Reserved: {inv['reserved_quantity']} (should be 0)")
+    print(f"  Reserved: {inv.reserved_quantity} (should be 0)")
     
     # Test concurrent users
     print("\n--- Testing Multi-User Scenarios ---")
@@ -154,7 +168,7 @@ def test_phase2():
     # Two users try to get limited stock
     manager.add_to_cart("alice", "KB789", 20)  # 23 in stock
     result = manager.add_to_cart("bob", "KB789", 5)
-    if result['status'] == 'failed':
+    if result.status == 'failed':
         print(f"✓ Prevented overselling with multiple users")
     
     # Test cart abandonment
@@ -162,12 +176,12 @@ def test_phase2():
     
     # Create an old cart (simulate by updating timestamp directly)
     result = manager.cleanup_abandoned_carts(hours=0)  # Clean all active carts
-    print(f"✓ Cleaned abandoned carts: {result.get('carts_cleaned', 0)} carts, {result.get('items_released', 0)} items")
+    print(f"✓ Cleaned abandoned carts: {result.carts_cleaned} carts, {result.items_released} items")
     
     # Verify inventory released after abandonment
     inv = manager.get_product_inventory("KB789")
     print(f"✓ KB789 After abandonment cleanup:")
-    print(f"  Available: {inv['available_quantity']} (should be back to full stock)")
+    print(f"  Available: {inv.available_quantity} (should be back to full stock)")
     
     print("\n✓ Phase 2 testing complete!")
     
@@ -182,10 +196,17 @@ def test_phase3():
     
     # Initialize manager with fresh database
     import os
-    if os.path.exists("test_phase3.db"):
-        os.remove("test_phase3.db")
+    from pathlib import Path
     
-    manager = CartInventoryManager("test_phase3.db")
+    # Use tools/db_files directory for test databases
+    db_dir = Path(__file__).parent.parent / "db_files"
+    db_dir.mkdir(exist_ok=True)
+    test_db = db_dir / "test_phase3.db"
+    
+    if test_db.exists():
+        test_db.unlink()
+    
+    manager = CartInventoryManager(str(test_db))
     manager.reset_database()
     print("✓ Database reset with demo data")
     
@@ -200,36 +221,36 @@ def test_phase3():
     
     # Add items to cart
     result1 = manager.add_to_cart(user_id, "KB123", 1)
-    if result1['status'] != 'success':
-        print(f"Failed to add KB123: {result1}")
+    if result1.status != 'success':
+        print(f"Failed to add KB123: {result1.model_dump()}")
     result2 = manager.add_to_cart(user_id, "MS001", 2)
-    if result2['status'] != 'success':
-        print(f"Failed to add MS001: {result2}")
+    if result2.status != 'success':
+        print(f"Failed to add MS001: {result2.model_dump()}")
     cart = manager.get_cart(user_id)
     print(f"✓ Cart prepared with {len(cart.items)} items, total: ${cart.total:.2f}")
     
     # Check inventory state before checkout
     for item in cart.items:
         inv = manager.get_product_inventory(item.product_id)
-        print(f"  {item.product_id}: stock={inv['stock_quantity']}, reserved={inv['reserved_quantity']}")
+        print(f"  {item.product_id}: stock={inv.stock_quantity}, reserved={inv.reserved_quantity}")
     
     # Test checkout
     print("\n--- Testing Checkout ---")
     
     result = manager.checkout_cart(user_id, "123 Test St, Demo City, DC 12345")
-    if result.get('status') == 'success':
-        order_id = result['order_id']
+    if result.status == 'success':
+        order_id = result.order_id
         print(f"✓ Order placed: {order_id}")
-        print(f"  Total: ${result['total']:.2f}")
-        print(f"  Items: {result['items']}")
-    elif 'error' in result:
-        print(f"✗ Checkout failed: {result['error']}")
+        print(f"  Total: ${result.total:.2f}")
+        print(f"  Items: {result.items}")
+    elif result.error:
+        print(f"✗ Checkout failed: {result.error}")
         return False
     else:
         # Handle cases where status is present but not 'success'
-        order_id = result.get('order_id', 'UNKNOWN')
-        if 'message' in result:
-            print(f"✓ Order placed: {order_id} - {result['message']}")
+        order_id = result.order_id or 'UNKNOWN'
+        if result.message:
+            print(f"✓ Order placed: {order_id} - {result.message}")
         else:
             print(f"✓ Order placed: {order_id}")
     
@@ -241,12 +262,12 @@ def test_phase3():
     print("\n--- Testing Order Retrieval ---")
     
     order = manager.get_order(user_id, order_id)
-    if 'error' not in order:
-        print(f"✓ Retrieved order {order['order_id']}")
-        print(f"  Status: {order['status']}")
-        print(f"  Items: {len(order['items'])}")
-        for item in order['items']:
-            print(f"    - {item['product_name']}: {item['quantity']}x @ ${item['unit_price']:.2f}")
+    if order:
+        print(f"✓ Retrieved order {order.order_id}")
+        print(f"  Status: {order.status}")
+        print(f"  Items: {len(order.items)}")
+        for item in order.items:
+            print(f"    - {item.product_name}: {item.quantity}x @ ${item.unit_price:.2f}")
     
     # Test order listing
     print("\n--- Testing Order Listing ---")
@@ -259,12 +280,12 @@ def test_phase3():
     
     # Update to shipped
     result = manager.update_order_status(order_id, "shipped")
-    if result['status'] == 'success':
+    if result.status == 'success':
         print(f"✓ Order status updated to: shipped")
     
     # Update to delivered
     result = manager.update_order_status(order_id, "delivered")
-    if result['status'] == 'success':
+    if result.status == 'success':
         print(f"✓ Order status updated to: delivered")
     
     # Test returns
@@ -272,20 +293,20 @@ def test_phase3():
     
     # Create return request
     result = manager.create_return(user_id, order_id, "KB123", "Defective product")
-    if result['status'] == 'success':
-        return_id = result['return_id']
+    if result.status == 'success':
+        return_id = result.return_id
         print(f"✓ Return request created: {return_id}")
-        print(f"  Refund amount: ${result['refund_amount']:.2f}")
+        print(f"  Refund amount: ${result.refund_amount:.2f}")
     
     # Process return (approve it)
     result = manager.process_return(return_id, approve=True)
-    if result['status'] == 'success':
-        print(f"✓ Return approved: {result['message']}")
+    if result.status == 'success':
+        print(f"✓ Return approved: {result.message}")
     
     # Check inventory was restored
     inv = manager.get_product_inventory("KB123")
     print(f"✓ Inventory restored after return:")
-    print(f"  Stock: {inv['stock_quantity']}")
+    print(f"  Stock: {inv.stock_quantity}")
     
     # Test order cancellation with inventory restoration
     print("\n--- Testing Order Cancellation ---")
@@ -293,8 +314,8 @@ def test_phase3():
     # Create another order
     manager.add_to_cart(user_id, "HD001", 1)
     result = manager.checkout_cart(user_id, "456 Another St")
-    if result['status'] == 'success':
-        cancel_order_id = result['order_id']
+    if result.status == 'success':
+        cancel_order_id = result.order_id
         print(f"✓ Created order to cancel: {cancel_order_id}")
     
     # Check inventory before cancellation
@@ -302,13 +323,13 @@ def test_phase3():
     
     # Cancel the order
     result = manager.update_order_status(cancel_order_id, "cancelled")
-    if result['status'] == 'success':
+    if result.status == 'success':
         print(f"✓ Order cancelled")
     
     # Check inventory after cancellation
     inv_after = manager.get_product_inventory("HD001")
     print(f"✓ Inventory restored after cancellation:")
-    print(f"  Stock before: {inv_before['stock_quantity']}, after: {inv_after['stock_quantity']}")
+    print(f"  Stock before: {inv_before.stock_quantity}, after: {inv_after.stock_quantity}")
     
     # Test filtering orders by status
     print("\n--- Testing Order Filtering ---")
