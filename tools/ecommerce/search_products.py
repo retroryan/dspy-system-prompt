@@ -1,4 +1,6 @@
 """Search products tool implementation using the unified base class."""
+import json
+from pathlib import Path
 from typing import List, Optional, ClassVar, Dict, Any, Type, Union
 from pydantic import BaseModel, Field, field_validator
 
@@ -34,40 +36,58 @@ class SearchProductsTool(BaseTool):
     
     def execute(self, query: str, category: str = None, max_price: Union[float, str, None] = None) -> dict:
         """Execute the tool to search products."""
-        # Generate realistic product results based on query
-        products = []
+        # Load products from JSON file
+        file_path = Path(__file__).resolve().parent.parent / "data" / "products.json"
         
-        if "gaming keyboard" in query.lower() or "keyboard" in query.lower():
-            products = [
-                {"id": "KB123", "name": "Gaming Mechanical Keyboard RGB", "price": 129.99, "rating": 4.5},
-                {"id": "KB456", "name": "Wireless Gaming Keyboard", "price": 89.99, "rating": 4.2},
-                {"id": "KB789", "name": "Pro Gaming Keyboard", "price": 149.99, "rating": 4.8}
-            ]
-        elif "laptop" in query.lower():
-            products = [
-                {"id": "LP001", "name": "Gaming Laptop 15-inch", "price": 899.99, "rating": 4.3},
-                {"id": "LP002", "name": "Business Laptop", "price": 649.99, "rating": 4.1}
-            ]
-        else:
-            # Generic products for other searches
-            products = [
-                {"id": "PROD001", "name": f"Product matching '{query}'", "price": 99.99, "rating": 4.0},
-                {"id": "PROD002", "name": f"Premium {query}", "price": 199.99, "rating": 4.5}
+        if not file_path.exists():
+            return {"error": "Products data file not found."}
+        
+        with open(file_path, "r") as file:
+            data = json.load(file)
+        
+        all_products = data["products"]
+        
+        # Filter products based on query
+        matching_products = []
+        query_lower = query.lower()
+        
+        for product in all_products:
+            # Check if query matches name, category, or subcategory
+            if (query_lower in product["name"].lower() or
+                (product.get("category") and query_lower in product["category"].lower()) or
+                (product.get("subcategory") and query_lower in product["subcategory"].lower())):
+                matching_products.append({
+                    "id": product["id"],
+                    "name": product["name"],
+                    "price": product["price"],
+                    "rating": product["rating"],
+                    "stock": product.get("stock", 0)
+                })
+        
+        # Apply category filter if specified
+        if category:
+            category_lower = category.lower()
+            matching_products = [
+                p for p in matching_products
+                if any(product["id"] == p["id"] and 
+                      (product.get("category", "").lower() == category_lower or 
+                       product.get("subcategory", "").lower() == category_lower)
+                      for product in all_products)
             ]
         
         # Apply price filter
         if max_price is not None:
             try:
                 max_price_float = float(max_price)
-                products = [p for p in products if p["price"] <= max_price_float]
+                matching_products = [p for p in matching_products if p["price"] <= max_price_float]
             except (ValueError, TypeError):
                 pass  # Skip price filtering if conversion fails
         
         return {
-            "products": products,
-            "count": len(products),
+            "products": matching_products,
+            "count": len(matching_products),
             "query": query,
-            "best_match": products[0] if products else None,
+            "best_match": matching_products[0] if matching_products else None,
             "filters": {
                 "category": category,
                 "max_price": max_price

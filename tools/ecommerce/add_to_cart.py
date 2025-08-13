@@ -1,4 +1,6 @@
 """Add to cart tool implementation using the unified base class."""
+import json
+from pathlib import Path
 from typing import List, ClassVar, Dict, Any, Type
 from pydantic import BaseModel, Field, field_validator
 
@@ -41,8 +43,42 @@ class AddToCartTool(BaseTool):
                 "note": f"Mock execution with placeholder: {product_id}"
             }
         
+        # Check if product exists in products.json
+        file_path = Path(__file__).resolve().parent.parent / "data" / "products.json"
+        if file_path.exists():
+            with open(file_path, "r") as file:
+                data = json.load(file)
+            
+            product_found = None
+            for product in data["products"]:
+                if product["id"] == product_id:
+                    product_found = product
+                    break
+            
+            if product_found:
+                # Check stock availability
+                available_stock = product_found.get("stock", 0)
+                if available_stock < quantity:
+                    return {
+                        "error": f"Insufficient stock. Only {available_stock} items available.",
+                        "product_id": product_id,
+                        "requested_quantity": quantity,
+                        "available_stock": available_stock
+                    }
+                
+                return {
+                    "cart_total": quantity,
+                    "added": product_id,
+                    "product_name": product_found["name"],
+                    "price": product_found["price"],
+                    "quantity": quantity,
+                    "total_price": product_found["price"] * quantity,
+                    "status": "success"
+                }
+        
+        # Default response if product not found or file doesn't exist
         return {
-            "cart_total": 2,
+            "cart_total": quantity,
             "added": product_id,
             "quantity": quantity,
             "status": "success"

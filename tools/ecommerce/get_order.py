@@ -27,9 +27,13 @@ class GetOrderTool(BaseTool):
     
     def execute(self, order_id: str) -> Dict[str, Any]:
         """Execute the tool to get order details."""
-        file_path = (
-            Path(__file__).resolve().parent.parent / "data" / "customer_order_data.json"
-        )
+        # First try the new orders.json file
+        file_path = Path(__file__).resolve().parent.parent / "data" / "orders.json"
+        
+        # Fall back to customer_order_data.json if orders.json doesn't exist
+        if not file_path.exists():
+            file_path = Path(__file__).resolve().parent.parent / "data" / "customer_order_data.json"
+            
         if not file_path.exists():
             return {"error": "Data file not found."}
 
@@ -38,7 +42,8 @@ class GetOrderTool(BaseTool):
         order_list = data["orders"]
 
         for order in order_list:
-            if order["id"] == order_id:
+            # Check both 'order_id' and 'id' fields for compatibility
+            if order.get("order_id") == order_id or order.get("id") == order_id:
                 return order
 
         return {"error": f"Order {order_id} not found."}

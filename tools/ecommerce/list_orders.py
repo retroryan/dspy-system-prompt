@@ -64,9 +64,13 @@ class ListOrdersTool(BaseTool):
                 "note": f"Mock data returned for placeholder email: {email_address}"
             }
         
-        file_path = (
-            Path(__file__).resolve().parent.parent / "data" / "customer_order_data.json"
-        )
+        # First try the new orders.json file
+        file_path = Path(__file__).resolve().parent.parent / "data" / "orders.json"
+        
+        # Fall back to customer_order_data.json if orders.json doesn't exist
+        if not file_path.exists():
+            file_path = Path(__file__).resolve().parent.parent / "data" / "customer_order_data.json"
+            
         if not file_path.exists():
             return {"error": "Data file not found."}
 
