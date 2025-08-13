@@ -1,11 +1,10 @@
 """Track order tool implementation using the unified base class."""
-import json
-from pathlib import Path
-from datetime import datetime, timedelta
-from typing import List, ClassVar, Dict, Any, Type
+from typing import List, ClassVar, Type
 from pydantic import BaseModel, Field
 
 from shared.tool_utils.base_tool import BaseTool, ToolTestCase
+from .cart_inventory_manager import CartInventoryManager
+from .models import Order
 
 
 class TrackOrderTool(BaseTool):
@@ -16,77 +15,68 @@ class TrackOrderTool(BaseTool):
     
     class Arguments(BaseModel):
         """Arguments for tracking an order."""
+        user_id: str = Field(..., description="User ID")
         order_id: str = Field(..., description="Order ID")
     
     # Tool definition as instance attributes
     description: str = "Track the status of an order"
     args_model: Type[BaseModel] = Arguments
     
-    def execute(self, order_id: str) -> dict:
+    def execute(self, user_id: str, order_id: str) -> dict:
         """Execute the tool to track an order."""
-        # First try the new orders.json file
-        file_path = Path(__file__).resolve().parent.parent / "data" / "orders.json"
+        # Use CartInventoryManager for operations
+        manager = CartInventoryManager()
         
-        # Fall back to customer_order_data.json if orders.json doesn't exist
-        if not file_path.exists():
-            file_path = Path(__file__).resolve().parent.parent / "data" / "customer_order_data.json"
-            
-        if file_path.exists():
-            with open(file_path, "r") as file:
-                data = json.load(file)
-            order_list = data["orders"]
-            
-            for order in order_list:
-                # Check both 'order_id' and 'id' fields for compatibility
-                if order.get("order_id") == order_id or order.get("id") == order_id:
-                    # Calculate estimated delivery based on status
-                    status = order.get("status", "processing")
-                    tracking = order.get("tracking_number")
-                    
-                    # Estimate delivery date based on status
-                    if status == "delivered":
-                        delivery_date = "Already delivered"
-                    elif status == "shipped":
-                        # Assume 2-3 days from order date for shipped items
-                        order_date = datetime.strptime(order["order_date"], "%Y-%m-%d")
-                        estimated_delivery = order_date + timedelta(days=3)
-                        delivery_date = estimated_delivery.strftime("%Y-%m-%d")
-                    elif status == "processing":
-                        # Assume 5-7 days from order date for processing items
-                        order_date = datetime.strptime(order["order_date"], "%Y-%m-%d")
-                        estimated_delivery = order_date + timedelta(days=7)
-                        delivery_date = estimated_delivery.strftime("%Y-%m-%d")
-                    else:
-                        delivery_date = "Unknown"
-                    
-                    return {
-                        "order_id": order_id,
-                        "status": status,
-                        "delivery_date": delivery_date,
-                        "tracking_number": tracking if tracking else f"TRK{order_id}",
-                        "shipping_address": order.get("shipping_address", "Not available")
-                    }
+        # Get order using the manager
+        result = manager.get_order(user_id, order_id)
         
-        # If order not found in file, return generic tracking info
-        return {
-            "order_id": order_id,
-            "status": "In transit",
-            "delivery_date": "Tomorrow",
-            "tracking_number": f"TRK{order_id}"
-        }
+        # Check if result is an Order model or a dict with error
+        if isinstance(result, Order):
+            order_dict = result.model_dump(exclude_none=True)
+            # Add tracking information
+            status = order_dict.get("status", "pending")
+            
+            # Generate tracking info based on status
+            if status == "delivered":
+                tracking_info = "Order has been delivered"
+                estimated_delivery = "Already delivered"
+            elif status == "shipped":
+                tracking_info = "Order is in transit"
+                estimated_delivery = "2-3 business days"
+            elif status == "processing":
+                tracking_info = "Order is being prepared"
+                estimated_delivery = "5-7 business days"
+            else:
+                tracking_info = f"Order status: {status}"
+                estimated_delivery = "To be determined"
+            
+            return {
+                "order_id": order_id,
+                "status": status,
+                "tracking_info": tracking_info,
+                "estimated_delivery": estimated_delivery,
+                "order_details": order_dict
+            }
+        else:
+            return result
     
     @classmethod
     def get_test_cases(cls) -> List[ToolTestCase]:
         """Return test cases for this tool."""
         return [
             ToolTestCase(
-                request="Track my order ORD789",
+                request="Track my order ORD123",
                 expected_tools=["track_order"],
-                description="Track specific order"
+                description="Basic order tracking"
             ),
             ToolTestCase(
-                request="Where is my package ORDER123?",
+                request="Where is my order 12345?",
                 expected_tools=["track_order"],
-                description="Check package location"
+                description="Order status inquiry"
+            ),
+            ToolTestCase(
+                request="Check shipping status for order ORD789",
+                expected_tools=["track_order"],
+                description="Shipping status check"
             )
         ]

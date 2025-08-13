@@ -29,12 +29,10 @@ from shared.llm_utils import save_dspy_history, get_full_history
 from agentic_loop.core_loop import run_agent_loop
 
 # Import tool sets
-from shared.tool_utils import (
-    EventsToolSet,
-    EcommerceToolSet,
-)
-from shared.tool_utils.agriculture_tool_set import AgricultureToolSet
 from shared.tool_utils.registry import ToolRegistry
+from tools.ecommerce.tool_set import EcommerceToolSet
+from tools.precision_agriculture.tool_set import AgricultureToolSet
+from tools.events.tool_set import EventsToolSet
 
 # Tool set class mapping using NAME constants
 TOOL_SET_MAP = {
@@ -283,7 +281,7 @@ Examples:
   poetry run python agentic_loop/demo_react_agent.py              # Run agriculture test cases
   poetry run python agentic_loop/demo_react_agent.py agriculture  # Run all agriculture test cases
   poetry run python agentic_loop/demo_react_agent.py agriculture 2    # Run only agriculture test case 2
-  poetry run python agentic_loop/demo_react_agent.py treasure_hunt # Run treasure hunt test cases
+  poetry run python agentic_loop/demo_react_agent.py ecommerce    # Run ecommerce test cases
 
 Verbose Mode:
   ./run_demo.sh --verbose                   # Show agent thoughts and tool results
@@ -297,7 +295,7 @@ Verbose Mode:
         'tool_set_or_index',
         nargs='?',
         default='agriculture',
-        help='Tool set name (agriculture, treasure_hunt, etc.) or test case index (1, 2, 3...)'
+        help='Tool set name (agriculture, ecommerce, events) or test case index (1, 2, 3...)'
     )
     
     # Second positional argument: test case index (only if first arg is tool set)

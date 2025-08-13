@@ -117,10 +117,15 @@ class ReactAgent(dspy.Module):
             
             # Add step to trajectory with type safety
             # This handles both regular tools and the 'finish' pseudo-tool
+            # Ensure thought is never None
+            thought_content = pred.next_thought if pred.next_thought is not None else "Analyzing the situation..."
+            tool_name = pred.next_tool_name if pred.next_tool_name is not None else "finish"
+            tool_args = pred.next_tool_args if pred.next_tool_args is not None else {}
+            
             trajectory.add_step(
-                thought=pred.next_thought,
-                tool_name=pred.next_tool_name,
-                tool_args=pred.next_tool_args
+                thought=thought_content,
+                tool_name=tool_name,
+                tool_args=tool_args
             )
             
         except Exception as err:

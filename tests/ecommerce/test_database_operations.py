@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 from tools.ecommerce.cart_inventory_manager import CartInventoryManager
-from tools.ecommerce.tests.test_utils import (
+from tests.ecommerce.test_utils import (
     TestDatabaseManager, TestDataFactory, DatabaseAssertions, validate_database_state
 )
 
@@ -91,7 +91,7 @@ class TestDatabaseOperations:
         
         # Try to add same item again - should update quantity, not duplicate
         result = self.manager.add_to_cart(user_id, "TEST001", 2)
-        assert result['status'] == 'success'
+        assert result.status == 'success'
         
         # Check there's only one row for this product in cart
         cart = self.manager.get_cart(user_id)
@@ -134,7 +134,7 @@ class TestDatabaseOperations:
             """)
         
         # Checkout should have failed
-        assert result['status'] == 'failed'
+        assert result.status == 'failed'
         
         # Verify inventory wasn't changed
         final_inv = self.manager.get_product_inventory("TEST001")
@@ -155,8 +155,8 @@ class TestDatabaseOperations:
         result2 = self.manager.add_to_cart(user2, "TEST001", 50)
         
         # First should succeed, second should fail (only 90 in stock)
-        assert result1['status'] == 'success'
-        assert result2['status'] == 'failed'  # Not enough stock
+        assert result1.status == 'success'
+        assert result2.status == 'failed'  # Not enough stock
         
         # Check inventory is correctly reserved
         inv = self.manager.get_product_inventory("TEST001")
@@ -201,7 +201,7 @@ class TestDatabaseOperations:
         # Validate database state
         validation = validate_database_state(self.db_path)
         
-        assert validation['valid'], f"Database validation failed: {validation['issues']}"
+        assert validation.valid, f"Database validation failed: {validation['issues']}"
         assert validation['stats']['total_orders'] == 1
         assert validation['stats']['active_carts'] == 0  # Cart was checked out
     

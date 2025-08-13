@@ -1,11 +1,10 @@
 """Add to cart tool implementation using the unified base class."""
-import json
-from pathlib import Path
-from typing import List, ClassVar, Dict, Any, Type
-from pydantic import BaseModel, Field, field_validator
+from typing import List, ClassVar, Type
+from pydantic import BaseModel, Field
 
 from shared.tool_utils.base_tool import BaseTool, ToolTestCase
 from .cart_inventory_manager import CartInventoryManager
+from .models import AddToCartOutput
 
 
 class AddToCartTool(BaseTool):
@@ -16,42 +15,21 @@ class AddToCartTool(BaseTool):
     
     class Arguments(BaseModel):
         """Arguments for adding to cart."""
-        product_id: str = Field(default="{{selected_product_from_search}}", description="Product ID")
+        user_id: str = Field(..., description="User ID")
+        product_id: str = Field(..., description="Product ID to add to cart")
         quantity: int = Field(default=1, ge=1, description="Quantity to add")
-        
-        @field_validator('product_id', mode='before')
-        @classmethod
-        def validate_product_id(cls, v):
-            """Handle placeholder values for product_id."""
-            if v is None or v == "None" or v == "" or str(v).lower() == "null":
-                # Generate a placeholder product ID for demo purposes
-                return "{{selected_product_from_search}}"
-            return v
     
     # Tool definition as instance attributes
     description: str = "Add a product to the shopping cart"
     args_model: Type[BaseModel] = Arguments
     
-    def execute(self, product_id: str = "{{selected_product_from_search}}", quantity: int = 1) -> dict:
+    def execute(self, user_id: str, product_id: str, quantity: int = 1) -> dict:
         """Execute the tool to add product to cart."""
-        # Handle placeholder values for demo purposes
-        if product_id.startswith('{{') and product_id.endswith('}}'):
-            return {
-                "cart_total": 2,
-                "added": "LAPTOP123",  # Mock product ID
-                "quantity": quantity,
-                "status": "success",
-                "note": f"Mock execution with placeholder: {product_id}"
-            }
-        
         # Use CartInventoryManager for real operations
         manager = CartInventoryManager()
         
-        # Default user_id for demo purposes - in production this would come from session
-        user_id = "demo_user"
-        
         # Add to cart using the manager
-        result = manager.add_to_cart(user_id, product_id, quantity)
+        result: AddToCartOutput = manager.add_to_cart(user_id, product_id, quantity)
         
         # Convert Pydantic model to dict for response
         return result.model_dump(exclude_none=True)

@@ -230,7 +230,7 @@ class CartInventoryManager:
         """Seed database with random demo orders from existing products.
         
         Creates realistic order history with:
-        - Random users
+        - Random users (with 'demo_user' having specific high-value orders)
         - Random products from products.json
         - Various order statuses
         - Date range over past 30 days
@@ -238,7 +238,8 @@ class CartInventoryManager:
         Args:
             num_orders: Number of demo orders to create
         """
-        demo_users = ['alice', 'bob', 'charlie', 'diana', 'eve', 'frank', 
+        # Include demo_user for testing scenarios
+        demo_users = ['demo_user', 'alice', 'bob', 'charlie', 'diana', 'eve', 'frank', 
                       'grace', 'henry', 'isabella', 'jack', 'kate', 'liam']
         statuses = ['pending', 'processing', 'shipped', 'delivered']
         status_weights = [0.1, 0.2, 0.3, 0.4]  # More delivered orders
@@ -303,6 +304,51 @@ class CartInventoryManager:
                         VALUES (?, ?, ?, ?, ?)
                     """, (order_id, item['product_id'], item['quantity'], 
                           item['unit_price'], item['subtotal']))
+            
+            # Add specific high-value orders for demo_user for testing
+            # Find laptop and monitor products
+            laptop_products = [p for p in products if 'laptop' in p['name'].lower()]
+            monitor_products = [p for p in products if 'monitor' in p['name'].lower()]
+            
+            # Create a delivered order with laptop for demo_user (over $300)
+            if laptop_products:
+                laptop = laptop_products[0]
+                order_id = f"ORD2020"
+                order_date = datetime.now() - timedelta(days=5)  # Recent order
+                
+                cursor.execute("""
+                    INSERT INTO orders 
+                    (order_id, user_id, total_amount, status, shipping_address, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (order_id, 'demo_user', laptop['price'], 'delivered', 
+                      '789 Tech Ave, Demo City, CA 90210', order_date, order_date))
+                
+                cursor.execute("""
+                    INSERT INTO order_items 
+                    (order_id, product_id, quantity, unit_price, subtotal)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (order_id, laptop['id'], 1, laptop['price'], laptop['price']))
+            
+            # Create another high-value order with monitor for demo_user
+            if monitor_products:
+                monitor = monitor_products[0]
+                order_id = f"ORD2021"
+                order_date = datetime.now() - timedelta(days=10)  # Within past month
+                
+                cursor.execute("""
+                    INSERT INTO orders 
+                    (order_id, user_id, total_amount, status, shipping_address, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (order_id, 'demo_user', monitor['price'], 'delivered',
+                      '789 Tech Ave, Demo City, CA 90210', order_date, order_date))
+                
+                cursor.execute("""
+                    INSERT INTO order_items 
+                    (order_id, product_id, quantity, unit_price, subtotal)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (order_id, monitor['id'], 1, monitor['price'], monitor['price']))
+            
+            conn.commit()
     
     def seed_demo_carts(self, num_carts: int = 5):
         """Create some active carts for demo users.

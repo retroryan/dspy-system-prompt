@@ -1,8 +1,10 @@
 """Return item tool implementation using the unified base class."""
-from typing import List, ClassVar, Dict, Any, Type
+from typing import List, ClassVar, Type
 from pydantic import BaseModel, Field
 
 from shared.tool_utils.base_tool import BaseTool, ToolTestCase
+from .cart_inventory_manager import CartInventoryManager
+from .models import CreateReturnOutput
 
 
 class ReturnItemTool(BaseTool):
@@ -13,6 +15,7 @@ class ReturnItemTool(BaseTool):
     
     class Arguments(BaseModel):
         """Arguments for returning an item."""
+        user_id: str = Field(..., description="User ID")
         order_id: str = Field(..., description="Order ID")
         item_id: str = Field(..., description="Item ID to return")
         reason: str = Field(..., description="Return reason")
@@ -21,16 +24,16 @@ class ReturnItemTool(BaseTool):
     description: str = "Return an item for refund or exchange"
     args_model: Type[BaseModel] = Arguments
     
-    def execute(self, order_id: str, item_id: str, reason: str) -> dict:
+    def execute(self, user_id: str, order_id: str, item_id: str, reason: str) -> dict:
         """Execute the tool to return an item."""
-        return {
-            "return_id": "RET456",
-            "status": "processing",
-            "refund_amount": "$99.99",
-            "order_id": order_id,
-            "item_id": item_id,
-            "reason": reason
-        }
+        # Use CartInventoryManager for operations
+        manager = CartInventoryManager()
+        
+        # Create return using the manager
+        result: CreateReturnOutput = manager.create_return(user_id, order_id, item_id, reason)
+        
+        # Convert Pydantic model to dict for response
+        return result.model_dump(exclude_none=True)
     
     @classmethod
     def get_test_cases(cls) -> List[ToolTestCase]:

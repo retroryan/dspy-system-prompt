@@ -1,5 +1,5 @@
 from typing import List, ClassVar, Type, Optional
-from .base_tool_sets import ToolSet, ToolSetConfig, ToolSetTestCase
+from shared.tool_utils.base_tool_sets import ToolSet, ToolSetConfig, ToolSetTestCase
 from datetime import datetime, timedelta
 import dspy
 
@@ -86,17 +86,31 @@ class EcommerceToolSet(ToolSet):
         from tools.ecommerce.search_products import SearchProductsTool
         from tools.ecommerce.track_order import TrackOrderTool
         from tools.ecommerce.return_item import ReturnItemTool
+        from tools.ecommerce.get_cart import GetCartTool
+        from tools.ecommerce.checkout import CheckoutTool
+        from tools.ecommerce.update_cart_item import UpdateCartItemTool
+        from tools.ecommerce.remove_from_cart import RemoveFromCartTool
+        from tools.ecommerce.clear_cart import ClearCartTool
         
         super().__init__(
             config=ToolSetConfig(
                 name=self.NAME,
                 description="E-commerce and shopping tools for order management, product search, cart operations, and customer support",
                 tool_classes=[
+                    # Product search
+                    SearchProductsTool,
+                    # Cart operations
+                    AddToCartTool,
+                    GetCartTool,
+                    UpdateCartItemTool,
+                    RemoveFromCartTool,
+                    ClearCartTool,
+                    CheckoutTool,
+                    # Order management
                     GetOrderTool,
                     ListOrdersTool,
-                    AddToCartTool,
-                    SearchProductsTool,
                     TrackOrderTool,
+                    # Customer support
                     ReturnItemTool
                 ]
             )

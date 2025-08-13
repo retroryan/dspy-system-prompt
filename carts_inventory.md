@@ -665,11 +665,30 @@ PYTHONPATH=. SQL_DEBUG=1 pytest tests/ecommerce/
 7. `tools/ecommerce/tests/test_integration_scenarios.py` - Full workflow tests
 8. `tools/ecommerce/tests/run_all_tests.py` - Test runner script
 
-### Phase 4: Tool Integration (Future Work)
-- [ ] Update all existing tools to accept user_id parameter
-- [ ] Modify tools to use CartInventoryManager instead of JSON files
-- [ ] Create new tools (GetCart, Checkout)
-- [ ] Maintain backward compatibility with existing test cases
+### Phase 4: Tool Integration ✅ COMPLETED
+- [x] Updated all existing tools to accept user_id parameter
+- [x] Modified tools to use CartInventoryManager instead of JSON files
+- [x] Created new tools (GetCartTool, CheckoutTool, UpdateCartItemTool, RemoveFromCartTool, ClearCartTool)
+- [x] Updated EcommerceToolSet with all new and updated tools
+
+**Tools Implemented**:
+1. **SearchProductsTool** - Updated to accept user_id
+2. **AddToCartTool** - Updated to use CartInventoryManager with user_id
+3. **GetCartTool** - NEW: View current cart contents
+4. **UpdateCartItemTool** - NEW: Update item quantities
+5. **RemoveFromCartTool** - NEW: Remove specific items
+6. **ClearCartTool** - NEW: Clear entire cart
+7. **CheckoutTool** - NEW: Complete purchase and create order
+8. **GetOrderTool** - Updated to use CartInventoryManager with user_id
+9. **ListOrdersTool** - Updated to use CartInventoryManager with user_id and status filter
+10. **TrackOrderTool** - Updated to use CartInventoryManager with user_id
+11. **ReturnItemTool** - Updated to use CartInventoryManager with user_id
+
+**Key Integration Features**:
+- All tools now use Pydantic models for type-safe input/output
+- Complete integration with CartInventoryManager for persistent state
+- User isolation via user_id parameter on all methods
+- Clean separation between tool interface and business logic
 
 ### Phase 5: Testing and Polish (Future Work)
 - [ ] Add comprehensive unit tests for CartInventoryManager

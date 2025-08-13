@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 from tools.ecommerce.cart_inventory_manager import CartInventoryManager
-from tools.ecommerce.tests.test_utils import (
+from tests.ecommerce.test_utils import (
     TestDatabaseManager, TestDataFactory, DatabaseAssertions
 )
 
@@ -51,17 +51,17 @@ class TestOrderProcessing:
         # Checkout
         result = self.manager.checkout_cart(user_id, "123 Test St, Demo City")
         
-        assert result['status'] == 'success'
+        assert result.status == 'success'
         assert 'order_id' in result
-        assert result['total'] == cart_total
-        assert result['items'] == 2
+        assert result.total == cart_total
+        assert result.items == 2
         
         # Verify order was created
-        order = self.manager.get_order(user_id, result['order_id'])
+        order = self.manager.get_order(user_id, result.order_id)
         assert order['status'] == 'processing'
         assert len(order['items']) == 2
         
-        DatabaseAssertions.assert_order_complete(self.manager, user_id, result['order_id'])
+        DatabaseAssertions.assert_order_complete(self.manager, user_id, result.order_id)
     
     def test_checkout_empty_cart(self):
         """Test checkout with empty cart fails."""
@@ -69,8 +69,8 @@ class TestOrderProcessing:
         
         result = self.manager.checkout_cart(user_id, "123 Test St")
         
-        assert result['status'] == 'failed'
-        assert 'empty' in result['error'].lower()
+        assert result.status == 'failed'
+        assert 'empty' in result.error.lower()
     
     def test_cart_cleared_after_checkout(self):
         """Test that cart is cleared after successful checkout."""
@@ -81,7 +81,7 @@ class TestOrderProcessing:
         
         # Checkout
         result = self.manager.checkout_cart(user_id, "123 Test St")
-        assert result['status'] == 'success'
+        assert result.status == 'success'
         
         # Verify cart is empty
         cart = self.manager.get_cart(user_id)
@@ -106,7 +106,7 @@ class TestOrderProcessing:
         
         # Checkout
         result = self.manager.checkout_cart(user_id, "123 Test St")
-        assert result['status'] == 'success'
+        assert result.status == 'success'
         
         # Verify stock reduced and reservation cleared
         final_inv = self.manager.get_product_inventory(product_id)
@@ -120,7 +120,7 @@ class TestOrderProcessing:
         # Create order
         self.manager.add_to_cart(user_id, "TEST001", 1)
         result = self.manager.checkout_cart(user_id, "123 Test St")
-        order_id = result['order_id']
+        order_id = result.order_id
         
         # Initial status should be processing
         order = self.manager.get_order(user_id, order_id)
@@ -128,14 +128,14 @@ class TestOrderProcessing:
         
         # Update to shipped
         result = self.manager.update_order_status(order_id, 'shipped')
-        assert result['status'] == 'success'
+        assert result.status == 'success'
         
         order = self.manager.get_order(user_id, order_id)
         assert order['status'] == 'shipped'
         
         # Update to delivered
         result = self.manager.update_order_status(order_id, 'delivered')
-        assert result['status'] == 'success'
+        assert result.status == 'success'
         
         order = self.manager.get_order(user_id, order_id)
         assert order['status'] == 'delivered'
@@ -147,12 +147,12 @@ class TestOrderProcessing:
         # Create order
         self.manager.add_to_cart(user_id, "TEST001", 1)
         result = self.manager.checkout_cart(user_id, "123 Test St")
-        order_id = result['order_id']
+        order_id = result.order_id
         
         # Try invalid status
         result = self.manager.update_order_status(order_id, 'invalid_status')
-        assert result['status'] == 'failed'
-        assert 'invalid status' in result['error'].lower()
+        assert result.status == 'failed'
+        assert 'invalid status' in result.error.lower()
     
     def test_order_cancellation(self):
         """Test order cancellation and inventory restoration."""
@@ -166,7 +166,7 @@ class TestOrderProcessing:
         # Create and checkout order
         self.manager.add_to_cart(user_id, product_id, 3)
         result = self.manager.checkout_cart(user_id, "123 Test St")
-        order_id = result['order_id']
+        order_id = result.order_id
         
         # Verify stock was reduced
         inv = self.manager.get_product_inventory(product_id)
@@ -174,7 +174,7 @@ class TestOrderProcessing:
         
         # Cancel order
         result = self.manager.update_order_status(order_id, 'cancelled')
-        assert result['status'] == 'success'
+        assert result.status == 'success'
         
         # Verify stock was restored
         final_inv = self.manager.get_product_inventory(product_id)
@@ -188,7 +188,7 @@ class TestOrderProcessing:
         for i in range(3):
             self.manager.add_to_cart(user_id, f"TEST00{i}", 1)
             result = self.manager.checkout_cart(user_id, f"Address {i}")
-            assert result['status'] == 'success'
+            assert result.status == 'success'
         
         # List all orders
         orders = self.manager.list_orders(user_id)
@@ -210,7 +210,7 @@ class TestOrderProcessing:
         for i in range(3):
             self.manager.add_to_cart(user_id, f"TEST00{i}", 1)
             result = self.manager.checkout_cart(user_id, "123 Test St")
-            order_ids.append(result['order_id'])
+            order_ids.append(result.order_id)
         
         # Update statuses
         self.manager.update_order_status(order_ids[0], 'shipped')
@@ -235,12 +235,12 @@ class TestOrderProcessing:
         # Create order for user1
         self.manager.add_to_cart(user1, "TEST001", 1)
         result1 = self.manager.checkout_cart(user1, "User1 Address")
-        order1_id = result1['order_id']
+        order1_id = result1.order_id
         
         # Create order for user2
         self.manager.add_to_cart(user2, "TEST002", 2)
         result2 = self.manager.checkout_cart(user2, "User2 Address")
-        order2_id = result2['order_id']
+        order2_id = result2.order_id
         
         # User1 can't access user2's order
         order = self.manager.get_order(user1, order2_id)
@@ -273,12 +273,12 @@ class TestOrderProcessing:
         # Another user takes remaining stock
         self.manager.add_to_cart("other_user", product_id, 2)
         other_result = self.manager.checkout_cart("other_user", "Other Address")
-        assert other_result['status'] == 'success'
+        assert other_result.status == 'success'
         
         # Now original user's checkout should handle the stock issue
         # The cart has reserved items, so checkout should still work
         result = self.manager.checkout_cart(user_id, "123 Test St")
-        assert result['status'] == 'success'  # Should work because items were reserved
+        assert result.status == 'success'  # Should work because items were reserved
     
     def test_order_totals_match_cart(self):
         """Test that order totals match cart totals."""
@@ -294,7 +294,7 @@ class TestOrderProcessing:
         
         # Checkout
         result = self.manager.checkout_cart(user_id, "123 Test St")
-        order_id = result['order_id']
+        order_id = result.order_id
         
         # Get order
         order = self.manager.get_order(user_id, order_id)
@@ -322,11 +322,11 @@ class TestOrderProcessing:
             results.append(result)
         
         # All should succeed if enough stock
-        success_count = sum(1 for r in results if r['status'] == 'success')
+        success_count = sum(1 for r in results if r.status == 'success')
         assert success_count == len(users)
         
         # Verify orders created
         for i, user in enumerate(users):
-            if results[i]['status'] == 'success':
+            if results[i].status == 'success':
                 orders = self.manager.list_orders(user)
                 assert len(orders) >= 1

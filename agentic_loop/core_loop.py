@@ -275,20 +275,6 @@ def run_agent_loop(
         - reasoning: The reasoning process (if available)
         - total_iterations: Number of iterations performed
         - error: Error message (if status is 'error')
-        
-    Example:
-        ```python
-        registry = ToolRegistry()
-        registry.register_tool_set(AgricultureToolSet())
-        
-        result = run_agent_loop(
-            user_query="What's the weather forecast for Seattle?",
-            tool_registry=registry,
-            tool_set_name="agriculture"
-        )
-        
-        print(result['answer'])
-        ```
     """
     try:
         # Determine which signature to use

@@ -36,7 +36,7 @@ class ToolSetConfig(BaseModel):
     """
     model_config = ConfigDict(frozen=True)  # Ensures the configuration is immutable after creation
     
-    name: str  # The unique name of the tool set (e.g., "treasure_hunt", "productivity")
+    name: str  # The unique name of the tool set (e.g., "agriculture", "ecommerce", "events")
     description: str  # A brief description of the tool set's purpose
     tool_classes: List[Type[BaseTool]]  # A list of direct references to the BaseTool subclasses included in this set
 

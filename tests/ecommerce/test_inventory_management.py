@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 from tools.ecommerce.cart_inventory_manager import CartInventoryManager
-from tools.ecommerce.tests.test_utils import (
+from tests.ecommerce.test_utils import (
     TestDatabaseManager, TestDataFactory, DatabaseAssertions
 )
 
@@ -84,8 +84,8 @@ class TestInventoryManagement:
         
         # Try to add to cart
         result = self.manager.add_to_cart("user1", product_id, 1)
-        assert result['status'] == 'failed'
-        assert 'insufficient stock' in result['error'].lower()
+        assert result.status == 'failed'
+        assert 'insufficient stock' in result.error.lower()
     
     def test_reservation_release(self):
         """Test releasing reserved inventory."""
@@ -132,15 +132,15 @@ class TestInventoryManagement:
         
         # User 1 reserves 3
         result1 = self.manager.add_to_cart("user1", product_id, 3)
-        assert result1['status'] == 'success'
+        assert result1.status == 'success'
         
         # User 2 tries to reserve 3 (only 2 available)
         result2 = self.manager.add_to_cart("user2", product_id, 3)
-        assert result2['status'] == 'failed'
+        assert result2.status == 'failed'
         
         # User 2 reserves 2 (should work)
         result3 = self.manager.add_to_cart("user2", product_id, 2)
-        assert result3['status'] == 'success'
+        assert result3.status == 'success'
         
         # Verify all stock is reserved
         inv = self.manager.get_product_inventory(product_id)
@@ -164,7 +164,7 @@ class TestInventoryManagement:
         
         # Checkout
         result = self.manager.checkout_cart(user_id, "123 Test St")
-        assert result['status'] == 'success'
+        assert result.status == 'success'
         
         # Check inventory was committed
         inv = self.manager.get_product_inventory(product_id)
@@ -179,7 +179,7 @@ class TestInventoryManagement:
         # Create and checkout order
         self.manager.add_to_cart(user_id, product_id, 2)
         result = self.manager.checkout_cart(user_id, "123 Test St")
-        order_id = result['order_id']
+        order_id = result.order_id
         
         # Check stock was reduced
         inv = self.manager.get_product_inventory(product_id)
@@ -199,7 +199,7 @@ class TestInventoryManagement:
         
         # Update stock
         result = self.manager.update_stock(product_id, 100)
-        assert result['status'] == 'success'
+        assert result.status == 'success'
         
         # Verify update
         inv = self.manager.get_product_inventory(product_id)
@@ -213,7 +213,7 @@ class TestInventoryManagement:
         products = ["HIGH_STOCK", "LOW_STOCK", "SINGLE_STOCK"]
         for product_id in products:
             result = self.manager.add_to_cart(user_id, product_id, 1)
-            assert result['status'] == 'success'
+            assert result.status == 'success'
         
         # Verify all are reserved
         for product_id in products:
@@ -267,15 +267,15 @@ class TestInventoryManagement:
         
         # First user gets it
         result1 = self.manager.add_to_cart("user1", product_id, 1)
-        assert result1['status'] == 'success'
+        assert result1.status == 'success'
         
         # Second user can't get it
         result2 = self.manager.add_to_cart("user2", product_id, 1)
-        assert result2['status'] == 'failed'
+        assert result2.status == 'failed'
         
         # First user removes it
         self.manager.remove_from_cart("user1", product_id)
         
         # Now second user can get it
         result3 = self.manager.add_to_cart("user2", product_id, 1)
-        assert result3['status'] == 'success'
+        assert result3.status == 'success'

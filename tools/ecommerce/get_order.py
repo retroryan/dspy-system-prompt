@@ -1,10 +1,10 @@
 """Get order tool implementation using the unified base class."""
-import json
-from pathlib import Path
-from typing import List, ClassVar, Dict, Any, Type
+from typing import List, ClassVar, Type
 from pydantic import BaseModel, Field
 
 from shared.tool_utils.base_tool import BaseTool, ToolTestCase
+from .cart_inventory_manager import CartInventoryManager
+from .models import Order
 
 
 class GetOrderTool(BaseTool):
@@ -15,6 +15,7 @@ class GetOrderTool(BaseTool):
     
     class Arguments(BaseModel):
         """Argument validation model."""
+        user_id: str = Field(..., description="User ID")
         order_id: str = Field(
             ..., 
             min_length=1, 
@@ -25,28 +26,19 @@ class GetOrderTool(BaseTool):
     description: str = "Get order details by order ID"
     args_model: Type[BaseModel] = Arguments
     
-    def execute(self, order_id: str) -> Dict[str, Any]:
+    def execute(self, user_id: str, order_id: str) -> dict:
         """Execute the tool to get order details."""
-        # First try the new orders.json file
-        file_path = Path(__file__).resolve().parent.parent / "data" / "orders.json"
+        # Use CartInventoryManager for operations
+        manager = CartInventoryManager()
         
-        # Fall back to customer_order_data.json if orders.json doesn't exist
-        if not file_path.exists():
-            file_path = Path(__file__).resolve().parent.parent / "data" / "customer_order_data.json"
-            
-        if not file_path.exists():
-            return {"error": "Data file not found."}
-
-        with open(file_path, "r") as file:
-            data = json.load(file)
-        order_list = data["orders"]
-
-        for order in order_list:
-            # Check both 'order_id' and 'id' fields for compatibility
-            if order.get("order_id") == order_id or order.get("id") == order_id:
-                return order
-
-        return {"error": f"Order {order_id} not found."}
+        # Get order using the manager
+        result = manager.get_order(user_id, order_id)
+        
+        # Check if result is an Order model or a dict with error
+        if isinstance(result, Order):
+            return result.model_dump(exclude_none=True)
+        else:
+            return result
     
     @classmethod
     def get_test_cases(cls) -> List[ToolTestCase]:
