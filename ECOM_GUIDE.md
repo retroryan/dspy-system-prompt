@@ -5,11 +5,20 @@
 ### Running Tests
 
 ```bash
-# Run all ecommerce tests
-poetry run python tools/ecommerce/test_cart_inventory.py
+# Run all ecommerce tests with pytest
+poetry run pytest tests/ecommerce/
 
-# Run Pydantic validation tests
-poetry run python tools/ecommerce/test_pydantic_validation.py
+# Run specific test class
+poetry run pytest tests/ecommerce/test_cart_inventory.py::TestPhase1CoreInfrastructure
+
+# Run with verbose output
+poetry run pytest tests/ecommerce/ -v
+
+# Run only Pydantic validation tests
+poetry run pytest tests/ecommerce/test_pydantic_validation.py
+
+# Run tests with coverage report
+poetry run pytest tests/ecommerce/ --cov=tools.ecommerce
 
 # Run integration with agentic loop
 poetry run python -m agentic_loop.demo_react_agent ecommerce
