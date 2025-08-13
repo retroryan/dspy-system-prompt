@@ -4,11 +4,12 @@ This module synthesizes the final answer from a trajectory using dspy.ChainOfTho
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Type
+from typing import TYPE_CHECKING, Type
 
 import dspy
 from dspy.primitives.module import Module
 from dspy.signatures.signature import ensure_signature
+from shared.trajectory_models import Trajectory
 
 logger = logging.getLogger(__name__)
 
@@ -41,25 +42,19 @@ class ReactExtract(Module):
 
         self.extract = dspy.ChainOfThought(fallback_signature)
 
-    def _format_trajectory(self, trajectory: dict[str, Any]):
-        """Format trajectory for display to the LLM."""
-        adapter = dspy.settings.adapter or dspy.ChatAdapter()
-        trajectory_signature = dspy.Signature(f"{', '.join(trajectory.keys())} -> x")
-        return adapter.format_user_message_content(trajectory_signature, trajectory)
-
-    def forward(self, trajectory: dict[str, Any], **input_args):
+    def forward(self, trajectory: Trajectory, **input_args):
         """
         Extract final answer from trajectory using Chain of Thought reasoning.
         
         Args:
-            trajectory: Dictionary containing the complete interaction history
+            trajectory: Trajectory object containing the complete interaction history
             **input_args: Original input arguments from the signature
             
         Returns:
             dspy.Prediction with final extracted answers and reasoning
         """
         # Format trajectory for the LLM
-        formatted_trajectory = self._format_trajectory(trajectory)
+        formatted_trajectory = trajectory.to_llm_format()
         
         # Use ChainOfThought to reason over the trajectory and extract final answer
         extract_result = self.extract(

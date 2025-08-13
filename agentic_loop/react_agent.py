@@ -1,26 +1,26 @@
 """
 Clean Manual Agent Loop implementation following DSPy ReAct patterns.
 
-This module provides a stateless agent loop that uses trajectory dictionaries
-directly, following the exact patterns from dspy/predict/react.py.
+This module provides a stateless agent loop that uses type-safe Pydantic
+trajectory models, following the React pattern with explicit tool selection.
 """
 
 import logging
-from typing import Dict
+from typing import Dict, Optional, Any
 import dspy
 
 from shared.tool_utils import BaseTool
-
 from shared.tool_utils.registry import ToolRegistry
+from shared.trajectory_models import Trajectory
 
-from typing import TYPE_CHECKING, Any, Literal, Type
+from typing import TYPE_CHECKING, Literal, Type
 
 if TYPE_CHECKING:
     from dspy.signatures.signature import Signature
 
 class ReactAgent(dspy.Module):
     """
-    React with trajectory dictionary management following DSPy ReAct patterns.
+    React agent using type-safe Pydantic trajectory.
     """
 
     def __init__(self, signature: Type["Signature"], tool_registry: ToolRegistry):
@@ -39,7 +39,6 @@ class ReactAgent(dspy.Module):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
         self.tool_registry = tool_registry
-
         self.all_tools: Dict[str, BaseTool] = tool_registry.get_all_tools()
 
         # Build instruction components
@@ -55,6 +54,7 @@ class ReactAgent(dspy.Module):
             "When writing next_thought, you may reason about the current situation and plan for future steps.",
             "When selecting the next_tool_name and its next_tool_args, the tool must be one of:\n",
         ])
+        
         # Add finish tool to the tools dictionary before enumeration
         tools_with_finish = self.all_tools.copy()
         
@@ -91,41 +91,45 @@ class ReactAgent(dspy.Module):
 
         self.react = dspy.Predict(react_signature)
 
-    def _format_trajectory(self, trajectory: dict[str, Any]):
-        """Format trajectory for display to the LLM."""
-        adapter = dspy.settings.adapter or dspy.ChatAdapter()
-        trajectory_signature = dspy.Signature(f"{', '.join(trajectory.keys())} -> x")
-        return adapter.format_user_message_content(trajectory_signature, trajectory)
-
-    def forward(self, trajectory: dict, current_iteration: int, **input_args):
+    def forward(self, trajectory: Trajectory, **input_args) -> Trajectory:
         """
-        Execute the reactive tool-calling loop.
+        Execute the reactive tool-calling loop with type-safe trajectory.
+        
+        The trajectory is updated with a new step containing the agent's
+        thought and tool invocation decision (including 'finish' if complete).
 
         Args:
-            trajectory: Dictionary containing the conversation trajectory
-            current_iteration: Current iteration number (1-based)
+            trajectory: The Trajectory object to update
             **input_args: Other signature input fields (e.g., user_query)
 
         Returns:
-            tuple: (updated_trajectory, tool_name, tool_args)
+            Updated trajectory with new step added
         """
-        # Calculate the current index (0-based for trajectory keys)
-        idx = current_iteration - 1
+        # Format trajectory for LLM
+        trajectory_text = trajectory.to_llm_format()
         
         try:
+            # Get prediction from LLM
             pred = self.react(
                 **input_args,
-                trajectory=self._format_trajectory(trajectory)
+                trajectory=trajectory_text
             )
-        except ValueError as err:
-            self.logger.warning(f"Ending the trajectory: Agent failed to select a valid tool: {err}")
-            # Return trajectory with error info
-            trajectory[f"error_{idx}"] = str(err)
-            return trajectory, "finish", {}
+            
+            # Add step to trajectory with type safety
+            # This handles both regular tools and the 'finish' pseudo-tool
+            trajectory.add_step(
+                thought=pred.next_thought,
+                tool_name=pred.next_tool_name,
+                tool_args=pred.next_tool_args
+            )
+            
+        except Exception as err:
+            self.logger.warning(f"Agent failed to select a valid tool: {err}")
+            # On error, signal finish to prevent infinite loops
+            trajectory.add_step(
+                thought=f"Error in agent reasoning: {str(err)}",
+                tool_name="finish",
+                tool_args={}
+            )
 
-        # Store the prediction details in trajectory with proper indexing
-        trajectory[f"thought_{idx}"] = pred.next_thought
-        trajectory[f"tool_name_{idx}"] = pred.next_tool_name
-        trajectory[f"tool_args_{idx}"] = pred.next_tool_args
-
-        return trajectory, pred.next_tool_name, pred.next_tool_args
+        return trajectory

@@ -104,32 +104,39 @@ def run_single_test_case(test_case, tool_registry, tool_set_name: str, console: 
         
         # Check if successful
         if result['status'] == 'success':
+            trajectory = result['trajectory']  # Now a Trajectory object
+            
             logger.info(f"✓ React loop completed in {result['execution_time']:.2f}s")
-            logger.info(f"  Iterations: {result.get('iteration_details', {}).get('iteration_count', 0)}")
-            logger.info(f"  Tools used: {', '.join(result['tools_used']) if result['tools_used'] else 'None'}")
+            logger.info(f"  Iterations: {trajectory.iteration_count}")
+            logger.info(f"  Tools used: {', '.join(trajectory.tools_used) if trajectory.tools_used else 'None'}")
             
             # Show iteration details in verbose mode
-            if demo_verbose_enabled and 'iteration_details' in result:
+            if demo_verbose_enabled and trajectory.steps:
                 logger.info("")
                 logger.info("  Iteration Details:")
-                for timing in result['iteration_details']['iteration_timings']:
-                    logger.info(f"    → Iteration {timing['iteration']}: {timing['time']:.2f}s")
-                    if timing['thought']:
-                        # Truncate long thoughts
-                        thought = timing['thought']
-                        if len(thought) > 80:
-                            thought = thought[:77] + "..."
-                        logger.info(f"      Thought: {thought}")
-                    logger.info(f"      Tool: {timing['tool']}")
+                for step in trajectory.steps:
+                    exec_time = step.observation.execution_time_ms / 1000 if step.observation else 0
+                    logger.info(f"    → Iteration {step.iteration}: {exec_time:.2f}s")
+                    
+                    # Show thought (truncated)
+                    thought = step.thought.content
+                    if len(thought) > 80:
+                        thought = thought[:77] + "..."
+                    logger.info(f"      Thought: {thought}")
+                    
+                    # Show tool
+                    if step.tool_invocation:
+                        logger.info(f"      Tool: {step.tool_invocation.tool_name}")
                     
                     # Show observation if available
-                    if demo_verbose_enabled:
-                        obs_key = f"observation_{timing['iteration']-1}"
-                        if obs_key in result['trajectory']:
-                            obs = str(result['trajectory'][obs_key])
-                            if len(obs) > 100:
-                                obs = obs[:97] + "..."
-                            logger.info(f"      Result: {obs}")
+                    if step.observation:
+                        if step.observation.status.value == "success":
+                            obs = str(step.observation.result)
+                        else:
+                            obs = f"Error: {step.observation.error}"
+                        if len(obs) > 100:
+                            obs = obs[:97] + "..."
+                        logger.info(f"      Result: {obs}")
             
             # Extract final answer
             logger.info(f"\n{console.section_header('📝 Extract Agent', char='-', width=60)}")
@@ -137,7 +144,7 @@ def run_single_test_case(test_case, tool_registry, tool_set_name: str, console: 
             
             # Add test case specific fields
             result['expected_tools'] = test_case.expected_tools
-            result['tools_match'] = set(result['tools_used']) == set(test_case.expected_tools)
+            result['tools_match'] = set(trajectory.tools_used) == set(test_case.expected_tools)
             
             return result
         else:

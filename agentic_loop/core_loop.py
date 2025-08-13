@@ -22,7 +22,7 @@ This separation of concerns allows for:
 import logging
 import time
 import os
-from typing import Dict, Tuple, Any, Optional
+from typing import Dict, Any, Optional
 from datetime import datetime
 
 import dspy
@@ -31,6 +31,11 @@ from agentic_loop.react_agent import ReactAgent
 from agentic_loop.extract_agent import ReactExtract
 from shared.llm_utils import save_dspy_history
 from shared.tool_utils.registry import ToolRegistry
+from shared.trajectory_models import (
+    Trajectory,
+    ToolStatus,
+    ExtractResult
+)
 
 # Initialize module-level logger
 logger = logging.getLogger(__name__)
@@ -42,9 +47,9 @@ def run_react_loop(
     user_query: str,
     tool_set_name: str,
     max_iterations: int = 5
-) -> Tuple[Dict[str, Any], float, Dict[str, Any]]:
+) -> Trajectory:
     """
-    Run the React agent loop until completion or max iterations.
+    Run the React agent loop with type-safe trajectory.
     
     This is the core loop that implements the React pattern:
     - Thought: Agent reasons about the current state
@@ -64,25 +69,14 @@ def run_react_loop(
         max_iterations: Maximum number of iterations (default: 5)
         
     Returns:
-        Tuple of (trajectory dictionary, execution time in seconds, iteration details)
-        
-    The trajectory dictionary contains:
-        - thought_N: The agent's reasoning at iteration N
-        - tool_name_N: The selected tool name at iteration N  
-        - tool_args_N: The tool arguments at iteration N
-        - observation_N: The tool execution result at iteration N
-        
-    The iteration details contains:
-        - iteration_count: Number of iterations performed
-        - iteration_timings: List of timing info for each iteration
+        Complete Trajectory object with all steps and observations
     """
-    trajectory = {}
-    current_iteration = 1
-    start_time = time.time()
-    iteration_details = {
-        'iteration_count': 0,
-        'iteration_timings': []
-    }
+    # Initialize trajectory
+    trajectory = Trajectory(
+        user_query=user_query,
+        tool_set_name=tool_set_name,
+        max_iterations=max_iterations
+    )
     
     # Check if DSPY debug mode is enabled for saving prompts
     dspy_debug_enabled = os.getenv("DSPY_DEBUG", "false").lower() == "true"
@@ -91,15 +85,13 @@ def run_react_loop(
     logger.debug(f"Query: {user_query}")
     
     # Main agent loop
-    while current_iteration <= max_iterations:
+    while trajectory.iteration_count < max_iterations:
         iteration_start = time.time()
-        logger.debug(f"Iteration {current_iteration}/{max_iterations}")
+        logger.debug(f"Iteration {trajectory.iteration_count + 1}/{max_iterations}")
         
-        # Call ReactAgent to get next action
-        # The agent receives the full trajectory and decides the next step
-        trajectory, tool_name, tool_args = react_agent(
+        # Get next action from agent (trajectory is updated in-place)
+        trajectory = react_agent(
             trajectory=trajectory,
-            current_iteration=current_iteration,
             user_query=user_query
         )
         
@@ -109,24 +101,37 @@ def run_react_loop(
                 saved_path = save_dspy_history(
                     tool_set_name=tool_set_name,
                     agent_type="react",
-                    index=current_iteration
+                    index=trajectory.iteration_count
                 )
                 if saved_path:
                     logger.debug(f"Saved ReactAgent history to: {saved_path}")
             except Exception as e:
                 logger.warning(f"Failed to save ReactAgent history: {e}")
         
+        # Get the last step that was just added
+        last_step = trajectory.steps[-1]
+        
+        # Check if agent has decided to finish
+        if last_step.is_finish:
+            logger.debug("Agent selected 'finish' - task complete")
+            trajectory.completed_at = datetime.now()
+            break
+        
+        # Execute the tool from the last step (only for real tools, not 'finish')
+        tool_invocation = last_step.tool_invocation
+        if not tool_invocation:
+            # Shouldn't happen, but handle gracefully
+            logger.warning("No tool invocation in step")
+            trajectory.completed_at = datetime.now()
+            break
+        
+        tool_name = tool_invocation.tool_name
+        tool_args = tool_invocation.tool_args
+        
         logger.debug(f"Tool selected: {tool_name}")
         logger.debug(f"Tool args: {tool_args}")
         
-        # Check if agent has decided to finish
-        if tool_name == "finish":
-            logger.debug("Agent selected 'finish' - task complete")
-            # Add final observation to indicate completion
-            trajectory[f"observation_{current_iteration-1}"] = "Completed."
-            break
-        
-        # Execute the selected tool
+        # Execute tool and add observation
         if tool_name in tool_registry.get_all_tools():
             try:
                 tool = tool_registry.get_tool(tool_name)
@@ -134,44 +139,48 @@ def run_react_loop(
                 result = tool.execute(**tool_args)
                 logger.debug(f"Tool result: {result}")
                 
-                # Add tool result to trajectory as observation
-                idx = current_iteration - 1
-                trajectory[f"observation_{idx}"] = result
+                execution_time = (time.time() - iteration_start) * 1000
+                trajectory.add_observation(
+                    tool_name=tool_name,
+                    status=ToolStatus.SUCCESS,
+                    result=result,
+                    execution_time_ms=execution_time
+                )
                 
             except Exception as e:
                 # Handle tool execution errors
                 logger.error(f"Tool execution error: {e}", exc_info=True)
-                trajectory[f"observation_{current_iteration-1}"] = f"Error: {e}"
+                trajectory.add_observation(
+                    tool_name=tool_name,
+                    status=ToolStatus.ERROR,
+                    error=str(e),
+                    execution_time_ms=(time.time() - iteration_start) * 1000
+                )
         else:
             # Handle unknown tool selection
             logger.warning(f"Unknown tool: {tool_name}")
-            trajectory[f"observation_{current_iteration-1}"] = f"Error: Unknown tool {tool_name}"
-        
-        # Track iteration timing
-        iteration_time = time.time() - iteration_start
-        iteration_details['iteration_timings'].append({
-            'iteration': current_iteration,
-            'time': iteration_time,
-            'tool': tool_name,
-            'thought': trajectory.get(f"thought_{current_iteration}", "")
-        })
-        
-        current_iteration += 1
+            trajectory.add_observation(
+                tool_name=tool_name,
+                status=ToolStatus.ERROR,
+                error=f"Unknown tool: {tool_name}",
+                execution_time_ms=0
+            )
     
     # Check if we hit the iteration limit
-    if current_iteration > max_iterations:
+    if trajectory.iteration_count >= max_iterations:
         logger.warning(f"Reached maximum iterations ({max_iterations})")
     
-    execution_time = time.time() - start_time
-    iteration_details['iteration_count'] = current_iteration - 1
-    return trajectory, execution_time, iteration_details
+    if not trajectory.completed_at:
+        trajectory.completed_at = datetime.now()
+    
+    return trajectory
 
 
 def extract_final_answer(
-    trajectory: Dict[str, Any],
+    trajectory: Trajectory,
     user_query: str,
     tool_set_name: str
-) -> Tuple[str, str]:
+) -> ExtractResult:
     """
     Extract the final answer from the trajectory using the Extract Agent.
     
@@ -180,21 +189,18 @@ def extract_final_answer(
     and observations to synthesize a coherent final answer.
     
     Args:
-        trajectory: The complete trajectory from the React loop containing
-                   all thoughts, actions, and observations
+        trajectory: The complete Trajectory object from the React loop
         user_query: The original user query for context
         tool_set_name: Name of the tool set being used (for history saving)
         
     Returns:
-        Tuple of (answer, reasoning)
-        - answer: The final synthesized answer to the user's query
-        - reasoning: The agent's reasoning process (if available)
+        ExtractResult with answer, reasoning, confidence, and sources
     """
     # Check if DEMO debug mode is enabled
     demo_debug_enabled = os.getenv("DEMO_DEBUG", "false").lower() == "true"
     
     logger.debug("Extracting final answer from trajectory")
-    logger.debug(f"Trajectory keys: {list(trajectory.keys())}")
+    logger.debug(f"Trajectory has {trajectory.iteration_count} steps")
     
     # Create a signature for answer extraction
     # This defines the contract for the Extract Agent
@@ -227,7 +233,12 @@ def extract_final_answer(
             logger.warning(f"Failed to save ExtractAgent history: {e}")
     
     logger.debug("Successfully extracted final answer")
-    return result.answer, getattr(result, 'reasoning', '')
+    
+    # Return structured ExtractResult
+    return ExtractResult(
+        answer=result.answer,
+        reasoning=getattr(result, 'reasoning', '')
+    )
 
 
 def run_agent_loop(
@@ -257,11 +268,12 @@ def run_agent_loop(
     Returns:
         Dictionary containing:
         - status: 'success' or 'error'
-        - trajectory: Complete trajectory of thoughts, actions, observations
+        - trajectory: Complete Trajectory object
         - tools_used: List of tools that were actually used
         - execution_time: Total execution time in seconds
         - answer: The final answer (if successful)
         - reasoning: The reasoning process (if available)
+        - total_iterations: Number of iterations performed
         - error: Error message (if status is 'error')
         
     Example:
@@ -303,8 +315,8 @@ def run_agent_loop(
             tool_registry=tool_registry
         )
         
-        # Run React loop
-        trajectory, react_time, iteration_details = run_react_loop(
+        # Run React loop - returns complete trajectory
+        trajectory = run_react_loop(
             react_agent=react_agent,
             tool_registry=tool_registry,
             user_query=user_query,
@@ -312,27 +324,27 @@ def run_agent_loop(
             max_iterations=max_iterations
         )
         
-        # Extract tools that were actually used
-        tools_used = []
-        for key in sorted(trajectory.keys()):
-            if key.startswith("tool_name_") and trajectory[key] != "finish":
-                tools_used.append(trajectory[key])
-        
         # Extract final answer using Extract Agent
-        answer, reasoning = extract_final_answer(
+        extract_result = extract_final_answer(
             trajectory=trajectory,
             user_query=user_query,
             tool_set_name=tool_set_name
         )
         
+        # Calculate execution time
+        if trajectory.completed_at and trajectory.started_at:
+            execution_time = (trajectory.completed_at - trajectory.started_at).total_seconds()
+        else:
+            execution_time = 0
+        
         return {
             'status': 'success',
-            'trajectory': trajectory,
-            'tools_used': tools_used,
-            'execution_time': react_time,
-            'answer': answer,
-            'reasoning': reasoning,
-            'iteration_details': iteration_details
+            'trajectory': trajectory,  # Clean Trajectory object
+            'tools_used': trajectory.tools_used,
+            'execution_time': execution_time,
+            'answer': extract_result.answer,
+            'reasoning': extract_result.reasoning,
+            'total_iterations': trajectory.iteration_count
         }
         
     except Exception as e:
@@ -342,5 +354,5 @@ def run_agent_loop(
             'error': str(e),
             'execution_time': 0,
             'tools_used': [],
-            'trajectory': {}
+            'trajectory': None  # Changed from {} to None for clean break
         }
