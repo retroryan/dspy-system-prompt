@@ -117,7 +117,14 @@ class ReactAgent(dspy.Module):
             
             # Add step to trajectory with type safety
             # This handles both regular tools and the 'finish' pseudo-tool
-            # Ensure thought is never None
+            
+            # Check if we got a valid response from the LLM
+            if not pred.next_thought and not pred.next_tool_name:
+                error_msg = "LLM failed to provide valid structured output (empty response). This model may not support DSPy's structured output format."
+                self.logger.error(error_msg)
+                raise ValueError(error_msg)
+            
+            # Use the prediction values, ensuring they're not None
             thought_content = pred.next_thought if pred.next_thought is not None else "Analyzing the situation..."
             tool_name = pred.next_tool_name if pred.next_tool_name is not None else "finish"
             tool_args = pred.next_tool_args if pred.next_tool_args is not None else {}
