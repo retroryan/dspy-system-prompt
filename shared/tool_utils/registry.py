@@ -103,12 +103,17 @@ class ToolRegistry:
     
     def register_tool_set(self, tool_set: ToolSet) -> None:
         """
-        Registers all tools from a tool set.
+        Registers all tools from a tool set and initializes the tool set.
         
         Args:
             tool_set: The tool set to register
         """
         self._tool_set = tool_set
+        
+        # Initialize the tool set (e.g., load test data, setup connections)
+        tool_set.initialize()
+        
+        # Register all tools from the tool set
         for tool_class in tool_set.config.tool_classes:
             tool_name = tool_class.NAME
 

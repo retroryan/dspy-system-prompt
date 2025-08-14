@@ -47,9 +47,9 @@ class TestInventoryManagement:
         
         # Check initial state
         inv = self.manager.get_product_inventory(product_id)
-        assert inv['stock_quantity'] == 5
-        assert inv['reserved_quantity'] == 0
-        assert inv['available_quantity'] == 5
+        assert inv.stock_quantity == 5
+        assert inv.reserved_quantity == 0
+        assert inv.available_quantity == 5
         
         # Reserve some inventory
         success = self.manager.reserve_inventory(product_id, 3)
@@ -57,8 +57,8 @@ class TestInventoryManagement:
         
         # Check updated state
         inv = self.manager.get_product_inventory(product_id)
-        assert inv['reserved_quantity'] == 3
-        assert inv['available_quantity'] == 2
+        assert inv.reserved_quantity == 3
+        assert inv.available_quantity == 2
         
         DatabaseAssertions.assert_inventory_consistent(self.manager, product_id)
     
@@ -72,7 +72,7 @@ class TestInventoryManagement:
         
         # Verify nothing was reserved
         inv = self.manager.get_product_inventory(product_id)
-        assert inv['reserved_quantity'] == 0
+        assert inv.reserved_quantity == 0
     
     def test_stock_cannot_go_negative(self):
         """Test that stock cannot go negative."""
@@ -96,14 +96,14 @@ class TestInventoryManagement:
         self.manager.add_to_cart(user_id, product_id, 3)
         
         inv = self.manager.get_product_inventory(product_id)
-        assert inv['reserved_quantity'] == 3
+        assert inv.reserved_quantity == 3
         
         # Remove from cart (releases inventory)
         self.manager.remove_from_cart(user_id, product_id)
         
         inv = self.manager.get_product_inventory(product_id)
-        assert inv['reserved_quantity'] == 0
-        assert inv['available_quantity'] == 5
+        assert inv.reserved_quantity == 0
+        assert inv.available_quantity == 5
     
     def test_partial_release(self):
         """Test partial release of reserved inventory."""
@@ -118,7 +118,7 @@ class TestInventoryManagement:
         
         # Check that 7 are still reserved
         inv = self.manager.get_product_inventory(product_id)
-        assert inv['reserved_quantity'] == 7
+        assert inv.reserved_quantity == 7
         
         # Check cart has 7 items
         cart = self.manager.get_cart(user_id)
@@ -144,8 +144,8 @@ class TestInventoryManagement:
         
         # Verify all stock is reserved
         inv = self.manager.get_product_inventory(product_id)
-        assert inv['reserved_quantity'] == 5
-        assert inv['available_quantity'] == 0
+        assert inv.reserved_quantity == 5
+        assert inv.available_quantity == 0
     
     def test_inventory_commit_on_checkout(self):
         """Test that inventory is committed (reduced) on checkout."""
@@ -159,8 +159,8 @@ class TestInventoryManagement:
         
         # Check reserved
         inv = self.manager.get_product_inventory(product_id)
-        assert inv['stock_quantity'] == initial_stock
-        assert inv['reserved_quantity'] == 2
+        assert inv.stock_quantity == initial_stock
+        assert inv.reserved_quantity == 2
         
         # Checkout
         result = self.manager.checkout_cart(user_id, "123 Test St")
@@ -168,8 +168,8 @@ class TestInventoryManagement:
         
         # Check inventory was committed
         inv = self.manager.get_product_inventory(product_id)
-        assert inv['stock_quantity'] == initial_stock - 2
-        assert inv['reserved_quantity'] == 0
+        assert inv.stock_quantity == initial_stock - 2
+        assert inv.reserved_quantity == 0
     
     def test_inventory_restoration_on_cancellation(self):
         """Test that inventory is restored when order is cancelled."""
@@ -183,7 +183,7 @@ class TestInventoryManagement:
         
         # Check stock was reduced
         inv = self.manager.get_product_inventory(product_id)
-        initial_stock_after_order = inv['stock_quantity']
+        initial_stock_after_order = inv.stock_quantity
         assert initial_stock_after_order == 3  # 5 - 2
         
         # Cancel order
@@ -191,7 +191,7 @@ class TestInventoryManagement:
         
         # Check stock was restored
         inv = self.manager.get_product_inventory(product_id)
-        assert inv['stock_quantity'] == 5  # Back to original
+        assert inv.stock_quantity == 5  # Back to original
     
     def test_update_stock_levels(self):
         """Test updating stock levels."""
@@ -203,7 +203,7 @@ class TestInventoryManagement:
         
         # Verify update
         inv = self.manager.get_product_inventory(product_id)
-        assert inv['stock_quantity'] == 100
+        assert inv.stock_quantity == 100
     
     def test_bulk_inventory_operations(self):
         """Test handling multiple inventory operations."""
@@ -218,7 +218,7 @@ class TestInventoryManagement:
         # Verify all are reserved
         for product_id in products:
             inv = self.manager.get_product_inventory(product_id)
-            assert inv['reserved_quantity'] >= 1
+            assert inv.reserved_quantity >= 1
             DatabaseAssertions.assert_inventory_consistent(self.manager, product_id)
         
         # Clear cart
@@ -227,7 +227,7 @@ class TestInventoryManagement:
         # Verify all reservations released
         for product_id in products:
             inv = self.manager.get_product_inventory(product_id)
-            assert inv['reserved_quantity'] == 0
+            assert inv.reserved_quantity == 0
             DatabaseAssertions.assert_inventory_consistent(self.manager, product_id)
     
     def test_edge_case_release_more_than_reserved(self):
@@ -242,8 +242,8 @@ class TestInventoryManagement:
         
         # Check that reserved is 0, not negative
         inv = self.manager.get_product_inventory(product_id)
-        assert inv['reserved_quantity'] == 0
-        assert inv['reserved_quantity'] >= 0  # Never negative
+        assert inv.reserved_quantity == 0
+        assert inv.reserved_quantity >= 0  # Never negative
     
     def test_edge_case_commit_without_reservation(self):
         """Test committing inventory without prior reservation."""
@@ -259,7 +259,7 @@ class TestInventoryManagement:
         
         # Stock should be unchanged
         final = self.manager.get_product_inventory(product_id)
-        assert final['stock_quantity'] == initial['stock_quantity']
+        assert final.stock_quantity == initial.stock_quantity
     
     def test_single_item_competition(self):
         """Test multiple users competing for a single item."""

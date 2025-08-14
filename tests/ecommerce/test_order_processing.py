@@ -52,14 +52,14 @@ class TestOrderProcessing:
         result = self.manager.checkout_cart(user_id, "123 Test St, Demo City")
         
         assert result.status == 'success'
-        assert 'order_id' in result
+        assert hasattr(result, 'order_id')
         assert result.total == cart_total
         assert result.items == 2
         
         # Verify order was created
         order = self.manager.get_order(user_id, result.order_id)
-        assert order['status'] == 'processing'
-        assert len(order['items']) == 2
+        assert order.status == 'processing'
+        assert len(order.items) == 2
         
         DatabaseAssertions.assert_order_complete(self.manager, user_id, result.order_id)
     
@@ -95,14 +95,14 @@ class TestOrderProcessing:
         
         # Check initial inventory
         initial_inv = self.manager.get_product_inventory(product_id)
-        initial_stock = initial_inv['stock_quantity']
+        initial_stock = initial_inv.stock_quantity
         
         # Add to cart
         self.manager.add_to_cart(user_id, product_id, 2)
         
         # Verify reservation
         inv = self.manager.get_product_inventory(product_id)
-        assert inv['reserved_quantity'] == 2
+        assert inv.reserved_quantity == 2
         
         # Checkout
         result = self.manager.checkout_cart(user_id, "123 Test St")
@@ -110,8 +110,8 @@ class TestOrderProcessing:
         
         # Verify stock reduced and reservation cleared
         final_inv = self.manager.get_product_inventory(product_id)
-        assert final_inv['stock_quantity'] == initial_stock - 2
-        assert final_inv['reserved_quantity'] == 0
+        assert final_inv.stock_quantity == initial_stock - 2
+        assert final_inv.reserved_quantity == 0
     
     def test_order_status_transitions(self):
         """Test all valid order status transitions."""
@@ -124,21 +124,21 @@ class TestOrderProcessing:
         
         # Initial status should be processing
         order = self.manager.get_order(user_id, order_id)
-        assert order['status'] == 'processing'
+        assert order.status == 'processing'
         
         # Update to shipped
         result = self.manager.update_order_status(order_id, 'shipped')
         assert result.status == 'success'
         
         order = self.manager.get_order(user_id, order_id)
-        assert order['status'] == 'shipped'
+        assert order.status == 'shipped'
         
         # Update to delivered
         result = self.manager.update_order_status(order_id, 'delivered')
         assert result.status == 'success'
         
         order = self.manager.get_order(user_id, order_id)
-        assert order['status'] == 'delivered'
+        assert order.status == 'delivered'
     
     def test_invalid_status_transition(self):
         """Test invalid order status transitions."""
@@ -161,7 +161,7 @@ class TestOrderProcessing:
         
         # Check initial stock
         initial_inv = self.manager.get_product_inventory(product_id)
-        initial_stock = initial_inv['stock_quantity']
+        initial_stock = initial_inv.stock_quantity
         
         # Create and checkout order
         self.manager.add_to_cart(user_id, product_id, 3)
@@ -170,7 +170,7 @@ class TestOrderProcessing:
         
         # Verify stock was reduced
         inv = self.manager.get_product_inventory(product_id)
-        assert inv['stock_quantity'] == initial_stock - 3
+        assert inv.stock_quantity == initial_stock - 3
         
         # Cancel order
         result = self.manager.update_order_status(order_id, 'cancelled')
@@ -178,7 +178,7 @@ class TestOrderProcessing:
         
         # Verify stock was restored
         final_inv = self.manager.get_product_inventory(product_id)
-        assert final_inv['stock_quantity'] == initial_stock
+        assert final_inv.stock_quantity == initial_stock
     
     def test_list_orders(self):
         """Test listing user orders."""
@@ -196,10 +196,10 @@ class TestOrderProcessing:
         
         # Verify order structure
         for order in orders:
-            assert 'order_id' in order
-            assert 'status' in order
-            assert 'total' in order
-            assert 'created_at' in order
+            assert hasattr(order, 'order_id')
+            assert hasattr(order, 'status')
+            assert hasattr(order, 'total')
+            assert hasattr(order, 'created_at')
     
     def test_list_orders_by_status(self):
         """Test filtering orders by status."""
@@ -244,20 +244,20 @@ class TestOrderProcessing:
         
         # User1 can't access user2's order
         order = self.manager.get_order(user1, order2_id)
-        assert 'error' in order
+        assert order is None
         
         # User2 can't access user1's order
         order = self.manager.get_order(user2, order1_id)
-        assert 'error' in order
+        assert order is None
         
         # Each user sees only their orders
         user1_orders = self.manager.list_orders(user1)
         assert len(user1_orders) == 1
-        assert user1_orders[0]['order_id'] == order1_id
+        assert user1_orders[0].order_id == order1_id
         
         user2_orders = self.manager.list_orders(user2)
         assert len(user2_orders) == 1
-        assert user2_orders[0]['order_id'] == order2_id
+        assert user2_orders[0].order_id == order2_id
     
     def test_checkout_with_insufficient_stock(self):
         """Test checkout fails if stock becomes insufficient."""
@@ -300,11 +300,11 @@ class TestOrderProcessing:
         order = self.manager.get_order(user_id, order_id)
         
         # Totals should match
-        assert abs(order['total'] - cart_total) < 0.01
+        assert abs(order.total - cart_total) < 0.01
         
         # Verify item totals
-        items_total = sum(item['subtotal'] for item in order['items'])
-        assert abs(items_total - order['total']) < 0.01
+        items_total = sum(item.subtotal for item in order.items)
+        assert abs(items_total - order.total) < 0.01
     
     def test_concurrent_checkouts(self):
         """Test multiple users checking out simultaneously."""

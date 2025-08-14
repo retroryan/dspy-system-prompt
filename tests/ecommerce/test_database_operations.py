@@ -138,7 +138,7 @@ class TestDatabaseOperations:
         
         # Verify inventory wasn't changed
         final_inv = self.manager.get_product_inventory("TEST001")
-        assert final_inv['reserved_quantity'] == initial_inv['reserved_quantity']
+        assert final_inv.reserved_quantity == initial_inv.reserved_quantity
         
         # Verify order wasn't created
         orders = self.manager.list_orders(user_id)
@@ -160,7 +160,7 @@ class TestDatabaseOperations:
         
         # Check inventory is correctly reserved
         inv = self.manager.get_product_inventory("TEST001")
-        assert inv['reserved_quantity'] == 50  # Only first user's reservation
+        assert inv.reserved_quantity == 50  # Only first user's reservation
     
     def test_index_usage(self):
         """Test that indexes are created and can be used."""
@@ -201,7 +201,7 @@ class TestDatabaseOperations:
         # Validate database state
         validation = validate_database_state(self.db_path)
         
-        assert validation.valid, f"Database validation failed: {validation['issues']}"
+        assert validation['valid'], f"Database validation failed: {validation['issues']}"
         assert validation['stats']['total_orders'] == 1
         assert validation['stats']['active_carts'] == 0  # Cart was checked out
     

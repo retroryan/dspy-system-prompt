@@ -16,32 +16,25 @@ import time
 import os
 from datetime import datetime
 
-# Add the project root to Python path so imports work
+# Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
-sys.path.insert(0, str(project_root / "shared" / "tool_utils"))
 
-# Import shared utilities
 from shared import ConsoleFormatter, setup_llm
 from shared.llm_utils import save_dspy_history, get_full_history
-
-# Import core loop functionality
 from agentic_loop.core_loop import run_agent_loop
-
-# Import tool sets
 from shared.tool_utils.registry import ToolRegistry
 from tools.ecommerce.tool_set import EcommerceToolSet
 from tools.precision_agriculture.tool_set import AgricultureToolSet
 from tools.events.tool_set import EventsToolSet
 
-# Tool set class mapping using NAME constants
-TOOL_SET_MAP = {
+# Available tool sets
+TOOL_SETS = {
     EcommerceToolSet.NAME: EcommerceToolSet,
     AgricultureToolSet.NAME: AgricultureToolSet,
     EventsToolSet.NAME: EventsToolSet,
 }
 
-# Initialize module-level logger
 logger = logging.getLogger(__name__)
 
 # Configure logging
@@ -68,15 +61,11 @@ def setup_logging(log_level: str = "INFO"):
         logging.getLogger('LiteLLM').setLevel(logging.WARNING)
 
 
-def create_tool_set_registry(tool_set_name: str) -> ToolRegistry:
+def create_tool_registry(tool_set_name: str) -> ToolRegistry:
     """Create tool registry for a specific tool set."""
-    tool_set_class = TOOL_SET_MAP[tool_set_name]
-    tool_set = tool_set_class()
-    
-    # Create registry and load tools
+    tool_set = TOOL_SETS[tool_set_name]()
     registry = ToolRegistry()
     registry.register_tool_set(tool_set)
-    
     return registry
 
 
@@ -84,9 +73,7 @@ def create_tool_set_registry(tool_set_name: str) -> ToolRegistry:
 
 def run_single_test_case(test_case, tool_registry, tool_set_name: str, console: ConsoleFormatter) -> Dict[str, Any]:
     """Run a single test case and return results."""
-    
-    # Check if verbose mode is enabled
-    demo_verbose_enabled = os.getenv("DEMO_VERBOSE", "false").lower() == "true"
+    verbose = os.getenv("DEMO_VERBOSE", "false").lower() == "true"
     
     # Run React loop
     logger.info(console.section_header('🔄 React Agent Execution', char='-', width=60))
@@ -97,7 +84,7 @@ def run_single_test_case(test_case, tool_registry, tool_set_name: str, console: 
             user_query=test_case.request,
             tool_registry=tool_registry,
             tool_set_name=tool_set_name,
-            max_iterations=5
+            max_iterations=10
         )
         
         # Check if successful
@@ -109,7 +96,7 @@ def run_single_test_case(test_case, tool_registry, tool_set_name: str, console: 
             logger.info(f"  Tools used: {', '.join(trajectory.tools_used) if trajectory.tools_used else 'None'}")
             
             # Show iteration details in verbose mode
-            if demo_verbose_enabled and trajectory.steps:
+            if verbose and trajectory.steps:
                 logger.info("")
                 logger.info("  Iteration Details:")
                 for step in trajectory.steps:
@@ -174,7 +161,7 @@ def run_test_cases(tool_set_name: str, test_case_index: Optional[int] = None):
     
     # Check if DSPY debug mode is enabled
     dspy_debug_enabled = os.getenv("DSPY_DEBUG", "false").lower() == "true"
-    demo_verbose_enabled = os.getenv("DEMO_VERBOSE", "false").lower() == "true"
+    verbose = os.getenv("DEMO_VERBOSE", "false").lower() == "true"
 
     logger.info(console.section_header('🚀 ReactAgent + Extract Agent Demo'))
     logger.info(f"Tool Set: {tool_set_name}")
@@ -185,7 +172,7 @@ def run_test_cases(tool_set_name: str, test_case_index: Optional[int] = None):
     setup_llm()
     
     # Create tool registry
-    registry = create_tool_set_registry(tool_set_name)
+    registry = create_tool_registry(tool_set_name)
     
     # Get all test cases from the registry
     test_cases = registry.get_all_test_cases()
@@ -237,7 +224,7 @@ def run_test_cases(tool_set_name: str, test_case_index: Optional[int] = None):
             logger.info(f"\n{console.section_header('🎯 Final Answer', char='-', width=60)}")
             logger.info(result['answer'])
             
-            if result['reasoning'] and (logger.level == logging.DEBUG or demo_verbose_enabled):
+            if result['reasoning'] and (logger.level == logging.DEBUG or verbose):
                 logger.info(f"\n{console.section_header('💭 Reasoning', char='-', width=60)}")
                 logger.info(result['reasoning'])
             
@@ -333,12 +320,12 @@ Verbose Mode:
         test_case_index = int(args.tool_set_or_index)
     except ValueError:
         # It's a tool set name
-        if args.tool_set_or_index in TOOL_SET_MAP:
+        if args.tool_set_or_index in TOOL_SETS:
             tool_set_name = args.tool_set_or_index
             test_case_index = args.test_index
         else:
             logger.error(f"Error: Unknown tool set '{args.tool_set_or_index}'")
-            logger.error(f"Available tool sets: {', '.join(TOOL_SET_MAP.keys())}")
+            logger.error(f"Available tool sets: {', '.join(TOOL_SETS.keys())}")
             sys.exit(1)
     
     try:

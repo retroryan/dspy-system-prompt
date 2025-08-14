@@ -2,6 +2,9 @@ from typing import List, ClassVar, Type, Optional
 from shared.tool_utils.base_tool_sets import ToolSet, ToolSetConfig, ToolSetTestCase
 from datetime import datetime, timedelta
 import dspy
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # NOTE: ReactSignatures in this project follow a specific design pattern:
@@ -85,6 +88,15 @@ class AgricultureToolSet(ToolSet):
                 ]
             )
         )
+    
+    def _perform_initialization(self) -> None:
+        """
+        Initialize the agriculture tool set.
+        
+        Currently no initialization required as weather tools use external APIs.
+        This method is here for consistency with the initialization pattern.
+        """
+        logger.info("Agriculture tool set initialized (no data loading required)")
     
     @classmethod
     def get_test_cases(cls) -> List[ToolSetTestCase]:

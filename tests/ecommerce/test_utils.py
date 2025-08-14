@@ -157,12 +157,12 @@ class DatabaseAssertions:
         """
         inv = manager.get_product_inventory(product_id)
         
-        expected_available = inv['stock_quantity'] - inv['reserved_quantity']
-        actual_available = inv['available_quantity']
+        expected_available = inv.stock_quantity - inv.reserved_quantity
+        actual_available = inv.available_quantity
         
         assert expected_available == actual_available, \
             f"Inventory inconsistent for {product_id}: " \
-            f"stock={inv['stock_quantity']}, reserved={inv['reserved_quantity']}, " \
+            f"stock={inv.stock_quantity}, reserved={inv.reserved_quantity}, " \
             f"available={actual_available} (expected {expected_available})"
     
     @staticmethod
@@ -203,16 +203,16 @@ class DatabaseAssertions:
                           'shipping_address', 'items', 'created_at']
         
         for field in required_fields:
-            assert field in order, f"Order {order_id} missing required field: {field}"
+            assert hasattr(order, field), f"Order {order_id} missing required field: {field}"
         
-        assert len(order['items']) > 0, f"Order {order_id} has no items"
+        assert len(order.items) > 0, f"Order {order_id} has no items"
         
         # Verify each item has required fields
-        for item in order['items']:
+        for item in order.items:
             item_fields = ['product_id', 'product_name', 'quantity', 
                           'unit_price', 'subtotal']
             for field in item_fields:
-                assert field in item, \
+                assert hasattr(item, field), \
                     f"Order item missing field {field} in order {order_id}"
     
     @staticmethod

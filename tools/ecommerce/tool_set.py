@@ -2,6 +2,9 @@ from typing import List, ClassVar, Type, Optional
 from shared.tool_utils.base_tool_sets import ToolSet, ToolSetConfig, ToolSetTestCase
 from datetime import datetime, timedelta
 import dspy
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # NOTE: ReactSignatures in this project follow a specific design pattern:
@@ -14,15 +17,17 @@ class EcommerceReactSignature(dspy.Signature):
     """E-commerce tool execution requirements.
     
     CURRENT DATE: {current_date}
+    CURRENT USER: demo_user (use this as user_id for all operations requiring user context)
 
     E-COMMERCE GUIDELINES:
     - Always use specific identifiers when referencing orders, products, or customers
     - For product searches, be flexible with search terms and filters
     - When tracking orders, use exact order IDs when provided
+    - IMPORTANT: Always include user_id="demo_user" when calling tools that require user context
     
     ORDER MANAGEMENT PRECISION:
-    - Order IDs typically follow patterns like "ORD123", "12345", or alphanumeric codes
-    - Customer emails should be validated format (user@domain.com)
+    - Order IDs typically follow patterns like "ORD123", "ORD001", or alphanumeric codes
+    - Always use user_id="demo_user" for order operations (track_order, list_orders, get_order, return_item)
     - Product SKUs are usually alphanumeric codes
     - Tracking numbers may have various formats depending on carrier
     
@@ -39,6 +44,7 @@ class EcommerceReactSignature(dspy.Signature):
     - Handle edge cases like expired return windows
     
     CART OPERATIONS:
+    - Always use user_id="demo_user" for cart operations (add_to_cart, get_cart, remove_from_cart, etc.)
     - Validate product availability before adding to cart
     - Handle quantity specifications properly
     - Support multiple items in single operations when applicable
@@ -116,6 +122,25 @@ class EcommerceToolSet(ToolSet):
             )
         )
     
+    def _perform_initialization(self) -> None:
+        """
+        Initialize the e-commerce database with test data.
+        
+        This ensures that the SQLite database is populated with:
+        - Products from products.json
+        - Demo orders
+        - Demo carts
+        """
+        from tools.ecommerce.cart_inventory_manager import CartInventoryManager
+        
+        logger.info("Initializing e-commerce database with test data...")
+        
+        # Create the manager and reset the database with demo data
+        manager = CartInventoryManager()
+        manager.reset_database()
+        
+        logger.info("E-commerce database initialized successfully")
+    
     @classmethod
     def get_test_cases(cls) -> List[ToolSetTestCase]:
         """
@@ -124,13 +149,15 @@ class EcommerceToolSet(ToolSet):
         These cases cover various interactions with e-commerce tools, including
         order management, product search, cart operations, and customer support.
         """
-        return [
+        # Basic test cases
+        basic_cases = [
             ToolSetTestCase(
-                request="I want to check my order status for order 12345",
+                request="I want to check my order status for order ORD001",
                 expected_tools=["track_order"],
                 expected_arguments={
                     "track_order": {
-                        "order_id": "12345"
+                        "user_id": "demo_user",
+                        "order_id": "ORD001"
                     }
                 },
                 description="Check specific order status",
@@ -138,11 +165,11 @@ class EcommerceToolSet(ToolSet):
                 scenario="order_management"
             ),
             ToolSetTestCase(
-                request="Show me all orders for customer@example.com",
+                request="Show me all orders for demo_user",
                 expected_tools=["list_orders"],
                 expected_arguments={
                     "list_orders": {
-                        "customer_email": "customer@example.com"
+                        "user_id": "demo_user"
                     }
                 },
                 description="List customer orders",
@@ -150,11 +177,12 @@ class EcommerceToolSet(ToolSet):
                 scenario="order_management"
             ),
             ToolSetTestCase(
-                request="Add product SKU123 to my cart",
+                request="Add product KB123 to my cart",
                 expected_tools=["add_to_cart"],
                 expected_arguments={
                     "add_to_cart": {
-                        "product_sku": "SKU123"
+                        "user_id": "demo_user",
+                        "product_sku": "KB123"
                     }
                 },
                 description="Add item to shopping cart",
@@ -175,11 +203,12 @@ class EcommerceToolSet(ToolSet):
                 scenario="shopping"
             ),
             ToolSetTestCase(
-                request="Track my order ORD789",
+                request="Track my order ORD002",
                 expected_tools=["track_order"],
                 expected_arguments={
                     "track_order": {
-                        "order_id": "ORD789"
+                        "user_id": "demo_user",
+                        "order_id": "ORD002"
                     }
                 },
                 description="Track shipment status",
@@ -187,11 +216,12 @@ class EcommerceToolSet(ToolSet):
                 scenario="order_management"
             ),
             ToolSetTestCase(
-                request="Get details for order ORD123",
+                request="Get details for order ORD003",
                 expected_tools=["get_order"],
                 expected_arguments={
                     "get_order": {
-                        "order_id": "ORD123"
+                        "user_id": "demo_user",
+                        "order_id": "ORD003"
                     }
                 },
                 description="Retrieve order details",
@@ -199,12 +229,17 @@ class EcommerceToolSet(ToolSet):
                 scenario="order_management"
             ),
             ToolSetTestCase(
-                request="Return item ITEM456 from order ORD123 because it's defective",
-                expected_tools=["return_item"],
+                request="Return item HD001 from order ORD002 because it's defective",
+                expected_tools=["get_order", "return_item"],
                 expected_arguments={
+                    "get_order": {
+                        "user_id": "demo_user",
+                        "order_id": "ORD002"
+                    },
                     "return_item": {
-                        "order_id": "ORD123",
-                        "item_id": "ITEM456",
+                        "user_id": "demo_user",
+                        "order_id": "ORD002",
+                        "item_id": "HD001",
                         "reason": "defective"
                     }
                 },
@@ -238,9 +273,14 @@ class EcommerceToolSet(ToolSet):
                 scenario="shopping"
             ),
             ToolSetTestCase(
-                request="Check the status of order 98765 and get full order details",
-                expected_tools=["track_order", "get_order"],
-                expected_arguments={},  # Multiple tools expected, hard to predict exact order
+                request="Check the status of order ORD004 and get full order details",
+                expected_tools=["get_order"],
+                expected_arguments={
+                    "get_order": {
+                        "user_id": "demo_user",
+                        "order_id": "ORD004"
+                    }
+                },
                 description="Comprehensive order inquiry",
                 tool_set=cls.NAME,
                 scenario="order_management"
@@ -248,7 +288,11 @@ class EcommerceToolSet(ToolSet):
             ToolSetTestCase(
                 request="List all my recent orders and track the latest one",
                 expected_tools=["list_orders", "track_order"],
-                expected_arguments={},  # Customer email would need to be extracted from context
+                expected_arguments={
+                    "list_orders": {
+                        "user_id": "demo_user"
+                    }
+                },
                 description="Recent orders with tracking follow-up",
                 tool_set=cls.NAME,
                 scenario="order_management"
@@ -267,6 +311,102 @@ class EcommerceToolSet(ToolSet):
                 scenario="shopping"
             )
         ]
+        
+        # Complex test scenarios (from run_demo_ecom.sh)
+        complex_cases = [
+            ToolSetTestCase(
+                request="I have a budget of $1500. I need to buy a laptop for work and a wireless mouse. Find the best laptop under my budget, add it to my cart with a compatible mouse, and then checkout to 789 Tech Ave.",
+                expected_tools=["search_products", "add_to_cart", "checkout"],
+                expected_arguments={
+                    "checkout": {
+                        "user_id": "demo_user",
+                        "shipping_address": "789 Tech Ave"
+                    }
+                },
+                description="Multi-step purchase with budget constraints",
+                tool_set=cls.NAME,
+                scenario="complex_shopping"
+            ),
+            ToolSetTestCase(
+                request="Compare gaming keyboards under $150 and wireless headphones under $100. Add the highest-rated item from each category to my cart, but only if the total stays under $200.",
+                expected_tools=["search_products", "add_to_cart", "get_cart"],
+                expected_arguments={},
+                description="Comparative shopping with price optimization",
+                tool_set=cls.NAME,
+                scenario="complex_shopping"
+            ),
+            ToolSetTestCase(
+                request="For user demo_user, check the status of their most recent order. If it's been delivered and contains any electronics over $500, initiate a return for the most expensive item citing 'changed mind'.",
+                expected_tools=["list_orders", "track_order", "get_order", "return_item"],
+                expected_arguments={},
+                description="Order tracking and conditional return processing",
+                tool_set=cls.NAME,
+                scenario="complex_support"
+            ),
+            ToolSetTestCase(
+                request="I want to buy 2 wireless mice and 1 mechanical keyboard. Add them to my cart.",
+                expected_tools=["search_products", "add_to_cart"],
+                expected_arguments={},
+                description="Multiple product purchase",
+                tool_set=cls.NAME,
+                scenario="complex_shopping"
+            ),
+            ToolSetTestCase(
+                request="For user demo_user, list all their delivered orders from the past month. For any order over $300, check if it contains laptops or monitors, and if so, process a return for quality issues and tell me the expected refund amount.",
+                expected_tools=["list_orders", "get_order", "return_item"],
+                expected_arguments={},
+                description="Complex return with refund verification",
+                tool_set=cls.NAME,
+                scenario="complex_support"
+            ),
+            ToolSetTestCase(
+                request="I need to buy a laptop under $1000 and gaming accessories under $200. Add them to my cart and calculate the total.",
+                expected_tools=["search_products", "add_to_cart", "get_cart"],
+                expected_arguments={},
+                description="Multi-product shopping with budget",
+                tool_set=cls.NAME,
+                scenario="complex_shopping"
+            ),
+            ToolSetTestCase(
+                request="Check what's currently in my cart. If the total is over $500 and includes any out-of-stock items, remove them and suggest similar alternatives that are in stock.",
+                expected_tools=["get_cart", "remove_from_cart", "search_products", "add_to_cart"],
+                expected_arguments={},
+                description="Abandoned cart recovery with alternatives",
+                tool_set=cls.NAME,
+                scenario="complex_cart"
+            ),
+            ToolSetTestCase(
+                request="For user demo_user, review their last 5 orders and identify the most frequently purchased category. Then search for new products in that category and add the top-rated one to their cart if it's different from what they've bought before.",
+                expected_tools=["list_orders", "get_order", "search_products", "add_to_cart"],
+                expected_arguments={},
+                description="Order history analysis with reorder",
+                tool_set=cls.NAME,
+                scenario="complex_personalization"
+            ),
+            ToolSetTestCase(
+                request="I'm setting up a home office. Find a laptop, monitor, keyboard, and mouse that are all compatible and stay within a $2000 budget. Prioritize items that are frequently bought together.",
+                expected_tools=["search_products", "add_to_cart", "get_cart"],
+                expected_arguments={},
+                description="Bundle shopping with compatibility check",
+                tool_set=cls.NAME,
+                scenario="complex_shopping"
+            ),
+            ToolSetTestCase(
+                request="I received order ORD012 but one item was damaged. First check the order details, then process a return for the damaged item with reason 'arrived damaged', and add a replacement to my cart for immediate reorder.",
+                expected_tools=["get_order", "return_item", "search_products", "add_to_cart"],
+                expected_arguments={
+                    "get_order": {
+                        "user_id": "demo_user",
+                        "order_id": "ORD012"
+                    }
+                },
+                description="Customer service escalation flow",
+                tool_set=cls.NAME,
+                scenario="complex_support"
+            )
+        ]
+        
+        return basic_cases + complex_cases
     
     @classmethod
     def get_react_signature(cls) -> Type[dspy.Signature]:

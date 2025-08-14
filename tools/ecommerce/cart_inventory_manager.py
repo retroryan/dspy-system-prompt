@@ -227,32 +227,75 @@ class CartInventoryManager:
                 """, (product['id'], stock))
     
     def seed_demo_orders(self, num_orders: int = 20):
-        """Seed database with random demo orders from existing products.
+        """Seed database with demo orders.
         
-        Creates realistic order history with:
-        - Random users (with 'demo_user' having specific high-value orders)
-        - Random products from products.json
-        - Various order statuses
-        - Date range over past 30 days
+        First loads orders from orders.json if available, then creates
+        additional random orders if needed to reach num_orders.
         
         Args:
-            num_orders: Number of demo orders to create
+            num_orders: Minimum number of demo orders to create
         """
-        # Include demo_user for testing scenarios
-        demo_users = ['demo_user', 'alice', 'bob', 'charlie', 'diana', 'eve', 'frank', 
-                      'grace', 'henry', 'isabella', 'jack', 'kate', 'liam']
-        statuses = ['pending', 'processing', 'shipped', 'delivered']
-        status_weights = [0.1, 0.2, 0.3, 0.4]  # More delivered orders
-        
-        products = self.load_products_from_json()
-        if not products:
-            print("No products found in products.json")
-            return
-        
         with self.get_connection() as conn:
             cursor = conn.cursor()
             
-            for i in range(num_orders):
+            # First, load orders from orders.json if it exists
+            orders_file = Path(__file__).parent.parent / "data" / "orders.json"
+            orders_loaded = 0
+            
+            if orders_file.exists():
+                try:
+                    with open(orders_file, 'r') as f:
+                        orders_data = json.load(f)
+                        
+                    for order in orders_data.get('orders', []):
+                        # Insert order
+                        order_date = datetime.strptime(order['order_date'], '%Y-%m-%d') if isinstance(order['order_date'], str) else order['order_date']
+                        cursor.execute("""
+                            INSERT INTO orders 
+                            (order_id, user_id, total_amount, status, shipping_address, created_at, updated_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            order['order_id'],
+                            order.get('user_id', 'demo_user'),  # Use user_id field
+                            order['total'],
+                            order['status'],
+                            order['shipping_address'],
+                            order_date,
+                            order_date
+                        ))
+                        
+                        # Insert order items
+                        for item in order['items']:
+                            cursor.execute("""
+                                INSERT INTO order_items 
+                                (order_id, product_id, quantity, unit_price, subtotal)
+                                VALUES (?, ?, ?, ?, ?)
+                            """, (
+                                order['order_id'],
+                                item['item_id'],
+                                item['quantity'],
+                                item['price'],
+                                item['price'] * item['quantity']
+                            ))
+                        
+                        orders_loaded += 1
+                        
+                except Exception as e:
+                    print(f"Warning: Could not load orders from orders.json: {e}")
+            
+            # Then create additional random orders if needed
+            demo_users = ['demo_user', 'alice', 'bob', 'charlie', 'diana', 'eve', 'frank', 
+                          'grace', 'henry', 'isabella', 'jack', 'kate', 'liam']
+            statuses = ['pending', 'processing', 'shipped', 'delivered']
+            status_weights = [0.1, 0.2, 0.3, 0.4]  # More delivered orders
+            
+            products = self.load_products_from_json()
+            if not products:
+                print("No products found in products.json")
+                return
+            
+            # Only create additional random orders if we need more
+            for i in range(orders_loaded, num_orders):
                 # Generate order details
                 user_id = random.choice(demo_users)
                 order_id = f"ORD{1000 + i:04d}"

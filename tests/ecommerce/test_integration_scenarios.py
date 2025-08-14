@@ -52,7 +52,7 @@ class TestIntegrationScenarios:
         inventory_before = {}
         for product in ["LAPTOP", "MOUSE", "KEYBOARD"]:
             inv = self.manager.get_product_inventory(product)
-            inventory_before[product] = inv['stock_quantity']
+            inventory_before[product] = inv.stock_quantity
         
         # Step 2: Add items to cart
         cart_items = [
@@ -84,17 +84,17 @@ class TestIntegrationScenarios:
         
         # Verify final order state
         order = self.manager.get_order(user_id, order_id)
-        assert order['status'] == 'delivered'
+        assert order.status == 'delivered'
         
         # Verify inventory was properly reduced
         for product, original_stock in inventory_before.items():
             inv_after = self.manager.get_product_inventory(product)
             if product == "LAPTOP":
-                assert inv_after['stock_quantity'] == original_stock - 1
+                assert inv_after.stock_quantity == original_stock - 1
             elif product == "MOUSE":
-                assert inv_after['stock_quantity'] == original_stock - 2
+                assert inv_after.stock_quantity == original_stock - 2
             elif product == "KEYBOARD":
-                assert inv_after['stock_quantity'] == original_stock - 1
+                assert inv_after.stock_quantity == original_stock - 1
     
     def test_concurrent_users_limited_stock(self):
         """Test multiple users competing for limited stock item."""
@@ -124,7 +124,7 @@ class TestIntegrationScenarios:
         
         # Verify item is now completely out of stock
         inv = self.manager.get_product_inventory(limited_product)
-        assert inv['stock_quantity'] == 0
+        assert inv.stock_quantity == 0
     
     def test_full_return_flow(self):
         """Test complete return flow: Order → Deliver → Return → Refund."""
@@ -152,7 +152,7 @@ class TestIntegrationScenarios:
         
         # Verify inventory restored
         headset_inv = self.manager.get_product_inventory("HEADSET")
-        assert headset_inv['stock_quantity'] == 25  # Back to original
+        assert headset_inv.stock_quantity == 25  # Back to original
     
     def test_database_integrity_comprehensive(self):
         """Test that database maintains integrity through complex operations."""

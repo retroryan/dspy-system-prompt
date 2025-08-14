@@ -63,7 +63,7 @@ class TestReturns:
         )
         
         assert result.status == 'success'
-        assert 'return_id' in result
+        assert hasattr(result, 'return_id')
         assert result.refund_amount > 0
         assert result.item_id == "TEST001"
         assert result.reason == "Defective product"
@@ -102,7 +102,7 @@ class TestReturns:
         
         # Get initial inventory
         initial_inv = self.manager.get_product_inventory("TEST001")
-        initial_stock = initial_inv['stock_quantity']
+        initial_stock = initial_inv.stock_quantity
         
         # Approve return
         result = self.manager.process_return(return_id, approve=True)
@@ -113,7 +113,7 @@ class TestReturns:
         
         # Verify inventory was restored
         final_inv = self.manager.get_product_inventory("TEST001")
-        assert final_inv['stock_quantity'] == initial_stock + 2  # 2 items were returned
+        assert final_inv.stock_quantity == initial_stock + 2  # 2 items were returned
     
     def test_reject_return(self):
         """Test rejecting a return request."""
@@ -125,7 +125,7 @@ class TestReturns:
         
         # Get initial inventory
         initial_inv = self.manager.get_product_inventory("TEST001")
-        initial_stock = initial_inv['stock_quantity']
+        initial_stock = initial_inv.stock_quantity
         
         # Reject return
         result = self.manager.process_return(return_id, approve=False)
@@ -136,7 +136,7 @@ class TestReturns:
         
         # Verify inventory was NOT restored
         final_inv = self.manager.get_product_inventory("TEST001")
-        assert final_inv['stock_quantity'] == initial_stock  # No change
+        assert final_inv.stock_quantity == initial_stock  # No change
     
     def test_cannot_process_return_twice(self):
         """Test that a return can't be processed twice."""
@@ -189,13 +189,13 @@ class TestReturns:
         
         # Find TEST001 item details
         test001_item = None
-        for item in order['items']:
-            if item['product_id'] == "TEST001":
+        for item in order.items:
+            if item.product_id == "TEST001":
                 test001_item = item
                 break
         
         assert test001_item is not None
-        expected_refund = test001_item['subtotal']
+        expected_refund = test001_item.subtotal
         
         # Create return
         result = self.manager.create_return(
@@ -226,7 +226,7 @@ class TestReturns:
         
         # Get stock after delivered order
         before_return = self.manager.get_product_inventory(product_id)
-        stock_before = before_return['stock_quantity']
+        stock_before = before_return.stock_quantity
         
         # The order had 2 units of TEST001
         expected_restoration = 2
@@ -239,7 +239,7 @@ class TestReturns:
         
         # Check stock after return
         after_return = self.manager.get_product_inventory(product_id)
-        stock_after = after_return['stock_quantity']
+        stock_after = after_return.stock_quantity
         
         assert stock_after == stock_before + expected_restoration
     
@@ -247,7 +247,7 @@ class TestReturns:
         """Test returning only some items from an order."""
         # Order has TEST001 (qty 2) and TEST002 (qty 1)
         order = self.manager.get_order(self.user_id, self.order_id)
-        initial_item_count = len(order['items'])
+        initial_item_count = len(order.items)
         
         # Return only TEST002
         result = self.manager.create_return(
@@ -260,4 +260,4 @@ class TestReturns:
         
         # Order still exists with all items (returns don't modify order history)
         order = self.manager.get_order(self.user_id, self.order_id)
-        assert len(order['items']) == initial_item_count
+        assert len(order.items) == initial_item_count

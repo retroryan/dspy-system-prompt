@@ -2,6 +2,9 @@ from typing import List, ClassVar, Type, Optional
 from shared.tool_utils.base_tool_sets import ToolSet, ToolSetConfig, ToolSetTestCase
 from datetime import datetime, timedelta
 import dspy
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # NOTE: ReactSignatures in this project follow a specific design pattern:
@@ -93,6 +96,15 @@ class EventsToolSet(ToolSet):
                 ]
             )
         )
+    
+    def _perform_initialization(self) -> None:
+        """
+        Initialize the events tool set.
+        
+        Events are managed in-memory and loaded from JSON files as needed.
+        This method is here for consistency with the initialization pattern.
+        """
+        logger.info("Events tool set initialized (using in-memory event management)")
     
     @classmethod
     def get_test_cases(cls) -> List[ToolSetTestCase]:

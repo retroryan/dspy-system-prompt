@@ -145,7 +145,7 @@ class TestCartOperations:
         # Verify inventory was released
         for product_id in ["TEST001", "TEST002", "TEST003"]:
             inv = self.manager.get_product_inventory(product_id)
-            assert inv['reserved_quantity'] == 0
+            assert inv.reserved_quantity == 0
     
     def test_cart_with_invalid_product(self):
         """Test adding non-existent product to cart."""

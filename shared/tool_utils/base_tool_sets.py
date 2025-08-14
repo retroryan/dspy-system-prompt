@@ -6,7 +6,7 @@ Each tool set can contain multiple tools and provides a way to manage and load
 collections of tools relevant to specific domains or functionalities.
 """
 from typing import List, Optional, Dict, Type, ClassVar, Any
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, PrivateAttr
 import dspy
 
 from .base_tool import ToolTestCase, BaseTool
@@ -50,6 +50,34 @@ class ToolSet(BaseModel):
     and Extract agents.
     """
     config: ToolSetConfig  # The immutable configuration for this tool set
+    _initialized: bool = PrivateAttr(default=False)  # Track if initialization has been called
+    
+    def initialize(self) -> None:
+        """
+        Initialize the tool set when it's registered.
+        
+        This method is called once when the tool set is registered with the ToolRegistry.
+        Subclasses can override this to perform one-time setup like:
+        - Loading test data into databases
+        - Setting up connections
+        - Initializing shared resources
+        
+        The base implementation sets the _initialized flag to prevent duplicate initialization.
+        """
+        if not self._initialized:
+            self._perform_initialization()
+            self._initialized = True
+    
+    def _perform_initialization(self) -> None:
+        """
+        Protected method for actual initialization logic.
+        
+        Subclasses should override this method to implement their specific
+        initialization requirements. This method is only called once per tool set instance.
+        """
+        # Default implementation does nothing
+        # Subclasses override this for custom initialization
+        pass
     
     def load(self) -> None:
         """
