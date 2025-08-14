@@ -14,6 +14,7 @@ import dspy
 from typing import Dict, Tuple, Any, Optional, List
 import time
 import os
+import json
 from datetime import datetime
 
 # Add project root to path
@@ -69,10 +70,124 @@ def create_tool_registry(tool_set_name: str) -> ToolRegistry:
     return registry
 
 
+def build_test_result(
+    tool_set_name: str,
+    test_index: int,
+    test_case: Any,
+    result: Dict[str, Any],
+    trajectory: Optional[Any] = None
+) -> Dict[str, Any]:
+    """Build a comprehensive test result dictionary."""
+    # Extract tool call details from trajectory
+    tool_calls = []
+    if trajectory:
+        for step in trajectory.steps:
+            if step.tool_invocation and step.tool_invocation.tool_name != "finish":
+                tool_call = {
+                    "iteration": step.iteration,
+                    "tool_name": step.tool_invocation.tool_name,
+                    "tool_args": step.tool_invocation.tool_args,
+                    "thought": step.thought.content,
+                }
+                
+                # Add observation details if available
+                if step.observation:
+                    tool_call["execution_time_ms"] = step.observation.execution_time_ms
+                    tool_call["status"] = step.observation.status.value
+                    if step.observation.status == "success":
+                        tool_call["result"] = step.observation.result
+                    else:
+                        tool_call["error"] = step.observation.error
+                
+                tool_calls.append(tool_call)
+    
+    # Build comprehensive test result
+    test_result = {
+        "test_metadata": {
+            "tool_set": tool_set_name,
+            "test_index": test_index,
+            "description": test_case.description,
+            "query": test_case.request,
+            "expected_tools": test_case.expected_tools,
+        },
+        "execution_summary": {
+            "status": result.get("status", "unknown"),
+            "total_execution_time": result.get("execution_time", 0),
+            "iterations": trajectory.iteration_count if trajectory else 0,
+            "tools_used": result.get("tools_used", []),
+            "tools_match_expected": result.get("tools_match", False),
+        },
+        "tool_calls": tool_calls,
+        "final_answer": result.get("answer", ""),
+        "extract_reasoning": result.get("reasoning", ""),
+        "warnings": [],
+        "errors": []
+    }
+    
+    # Add warnings
+    if not result.get("tools_match", False):
+        expected = set(test_case.expected_tools)
+        actual = set(result.get("tools_used", []))
+        test_result["warnings"].append({
+            "type": "tools_mismatch",
+            "message": f"Expected tools: {list(expected)}, Got: {list(actual)}",
+            "missing_tools": list(expected - actual),
+            "extra_tools": list(actual - expected)
+        })
+    
+    # Add errors
+    if result.get("status") == "error":
+        test_result["errors"].append({
+            "type": "execution_error",
+            "message": result.get("error", "Unknown error")
+        })
+    
+    return test_result
 
 
-def run_single_test_case(test_case, tool_registry, tool_set_name: str, console: ConsoleFormatter) -> Dict[str, Any]:
-    """Run a single test case and return results."""
+def save_all_test_results(
+    tool_set_name: str,
+    test_results: List[Dict[str, Any]],
+    test_case_index: Optional[int] = None
+) -> None:
+    """Save all test results from a run to a single JSON file."""
+    # Create test_results directory if it doesn't exist
+    results_dir = Path("test_results")
+    results_dir.mkdir(exist_ok=True)
+    
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Include test case index in filename if running single test
+    if test_case_index is not None:
+        filename = results_dir / f"{tool_set_name}_test{test_case_index}_{timestamp}.json"
+    else:
+        filename = results_dir / f"{tool_set_name}_all_{timestamp}.json"
+    
+    # Create the final results structure
+    final_results = {
+        "run_metadata": {
+            "tool_set": tool_set_name,
+            "timestamp": timestamp,
+            "total_tests": len(test_results),
+            "successful_tests": sum(1 for r in test_results if r["execution_summary"]["status"] == "success"),
+            "failed_tests": sum(1 for r in test_results if r["execution_summary"]["status"] == "error"),
+            "tests_with_warnings": sum(1 for r in test_results if r["warnings"]),
+        },
+        "test_results": test_results
+    }
+    
+    # Save to file
+    with open(filename, 'w') as f:
+        json.dump(final_results, f, indent=2, default=str)
+    
+    logger.info(f"📊 Test results saved to: {filename}")
+
+
+
+
+def run_single_test_case(test_case, tool_registry, tool_set_name: str, console: ConsoleFormatter, test_index: int) -> Tuple[Dict[str, Any], Optional[Any]]:
+    """Run a single test case and return results with trajectory."""
     verbose = os.getenv("DEMO_VERBOSE", "false").lower() == "true"
     
     # Run React loop
@@ -131,7 +246,7 @@ def run_single_test_case(test_case, tool_registry, tool_set_name: str, console: 
             result['expected_tools'] = test_case.expected_tools
             result['tools_match'] = set(trajectory.tools_used) == set(test_case.expected_tools)
             
-            return result
+            return result, trajectory
         else:
             # Error case
             return {
@@ -141,7 +256,7 @@ def run_single_test_case(test_case, tool_registry, tool_set_name: str, console: 
                 'tools_used': [],
                 'expected_tools': test_case.expected_tools,
                 'tools_match': False
-            }
+            }, None
         
     except Exception as e:
         logger.error(f"Test case failed: {e}", exc_info=True)
@@ -152,7 +267,7 @@ def run_single_test_case(test_case, tool_registry, tool_set_name: str, console: 
             'tools_used': [],
             'expected_tools': test_case.expected_tools,
             'tools_match': False
-        }
+        }, None
 
 
 def run_test_cases(tool_set_name: str, test_case_index: Optional[int] = None):
@@ -193,6 +308,7 @@ def run_test_cases(tool_set_name: str, test_case_index: Optional[int] = None):
     # Track overall results
     successful_tests = 0
     total_time = 0
+    all_test_results = []  # Collect all test results
     
     # Run each test case
     for i, test_case in enumerate(test_cases, 1):
@@ -203,7 +319,11 @@ def run_test_cases(tool_set_name: str, test_case_index: Optional[int] = None):
         logger.info("")
         
         # Run the test case
-        result = run_single_test_case(test_case, registry, tool_set_name, console)
+        result, trajectory = run_single_test_case(test_case, registry, tool_set_name, console, i)
+        
+        # Build and collect test result
+        test_result = build_test_result(tool_set_name, i, test_case, result, trajectory)
+        all_test_results.append(test_result)
         
         # Display results
         logger.info(f"\n{console.section_header('📊 Results', char='-', width=60)}")
@@ -255,6 +375,9 @@ def run_test_cases(tool_set_name: str, test_case_index: Optional[int] = None):
         logger.info(f"Success rate: {successful_tests/len(test_cases)*100:.1f}%")
         if successful_tests > 0:
             logger.info(f"Average execution time: {total_time/successful_tests:.2f}s")
+    
+    # Save all test results to a single JSON file
+    save_all_test_results(tool_set_name, all_test_results, test_case_index)
 
 
 def main():

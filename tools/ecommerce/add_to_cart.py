@@ -3,6 +3,7 @@ from typing import List, ClassVar, Type
 from pydantic import BaseModel, Field
 
 from shared.tool_utils.base_tool import BaseTool, ToolTestCase
+from shared.tool_utils.error_handling import safe_tool_execution
 from .cart_inventory_manager import CartInventoryManager
 from .models import AddToCartOutput
 
@@ -23,6 +24,7 @@ class AddToCartTool(BaseTool):
     description: str = "Add a product to the shopping cart"
     args_model: Type[BaseModel] = Arguments
     
+    @safe_tool_execution
     def execute(self, user_id: str, product_id: str, quantity: int = 1) -> dict:
         """Execute the tool to add product to cart."""
         # Use CartInventoryManager for real operations
@@ -30,6 +32,11 @@ class AddToCartTool(BaseTool):
         
         # Add to cart using the manager
         result: AddToCartOutput = manager.add_to_cart(user_id, product_id, quantity)
+        
+        # Check if operation failed and raise appropriate error
+        if result.status == "failed" and result.error:
+            # The manager already returns structured errors, just pass them through
+            return result.model_dump(exclude_none=True)
         
         # Convert Pydantic model to dict for response
         return result.model_dump(exclude_none=True)

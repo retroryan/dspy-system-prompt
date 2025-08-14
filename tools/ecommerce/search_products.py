@@ -5,6 +5,7 @@ from typing import List, Optional, ClassVar, Dict, Any, Type, Union
 from pydantic import BaseModel, Field, field_validator
 
 from shared.tool_utils.base_tool import BaseTool, ToolTestCase
+from shared.tool_utils.error_handling import safe_tool_execution, ToolDataError
 
 
 class SearchProductsTool(BaseTool):
@@ -35,13 +36,18 @@ class SearchProductsTool(BaseTool):
     description: str = "Search for products in the catalog"
     args_model: Type[BaseModel] = Arguments
     
+    @safe_tool_execution
     def execute(self, user_id: str, query: str, category: str = None, max_price: Union[float, str, None] = None) -> dict:
         """Execute the tool to search products."""
         # Load products from JSON file
         file_path = Path(__file__).resolve().parent.parent / "data" / "products.json"
         
         if not file_path.exists():
-            return {"error": "Products data file not found."}
+            raise ToolDataError(
+                "Products data file not found",
+                error_code="DATA_FILE_MISSING",
+                details={"file": str(file_path)}
+            )
         
         with open(file_path, "r") as file:
             data = json.load(file)

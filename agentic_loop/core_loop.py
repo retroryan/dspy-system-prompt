@@ -87,7 +87,8 @@ def run_react_loop(
     # Main agent loop
     while trajectory.iteration_count < max_iterations:
         iteration_start = time.time()
-        logger.debug(f"Iteration {trajectory.iteration_count + 1}/{max_iterations}")
+        iteration_num = trajectory.iteration_count + 1
+        logger.info(f"🔄 Loop iteration {iteration_num}/{max_iterations}: Reasoning about next action...")
         
         # Get next action from agent (trajectory is updated in-place)
         trajectory = react_agent(
@@ -113,7 +114,7 @@ def run_react_loop(
         
         # Check if agent has decided to finish
         if last_step.is_finish:
-            logger.debug("Agent selected 'finish' - task complete")
+            logger.info(f"   ✅ Agent selected 'finish' - task complete after {iteration_num} iteration(s)")
             trajectory.completed_at = datetime.now()
             break
         
@@ -128,14 +129,14 @@ def run_react_loop(
         tool_name = tool_invocation.tool_name
         tool_args = tool_invocation.tool_args
         
-        logger.debug(f"Tool selected: {tool_name}")
+        # Log tool selection with minimal info
+        logger.info(f"   🛠️  Executing tool: {tool_name}")
         logger.debug(f"Tool args: {tool_args}")
         
         # Execute tool and add observation
         if tool_name in tool_registry.get_all_tools():
             try:
                 tool = tool_registry.get_tool(tool_name)
-                logger.debug(f"Executing tool: {tool_name}")
                 result = tool.execute(**tool_args)
                 logger.debug(f"Tool result: {result}")
                 

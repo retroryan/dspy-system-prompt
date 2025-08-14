@@ -12,6 +12,15 @@ from .base_tool_sets import (
     ToolSetTestCase,
     ToolSetConfig
 )
+from .error_handling import (
+    ToolError,
+    ToolExecutionError,
+    ToolValidationError,
+    ToolDataError,
+    safe_tool_execution,
+    handle_tool_error,
+    validate_required_data
+)
 
 __all__ = [
     # Core tool interface
@@ -25,5 +34,14 @@ __all__ = [
     # Tool sets
     'ToolSet',
     'ToolSetTestCase',
-    'ToolSetConfig'
+    'ToolSetConfig',
+    
+    # Error handling
+    'ToolError',
+    'ToolExecutionError',
+    'ToolValidationError',
+    'ToolDataError',
+    'safe_tool_execution',
+    'handle_tool_error',
+    'validate_required_data'
 ]

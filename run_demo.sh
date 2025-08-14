@@ -88,6 +88,9 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
+# Ensure test_results directory exists for logging
+mkdir -p test_results
+
 if [ "$QUERY_MODE" = true ]; then
     # Query mode - use run_query.py
     if [ -z "$TOOL_SET" ]; then
@@ -106,5 +109,6 @@ if [ "$QUERY_MODE" = true ]; then
     fi
 else
     # Test mode - use demo_react_agent.py
+    echo "📊 Test results will be saved to test_results/ directory"
     exec poetry run python -m agentic_loop.demo_react_agent "${REMAINING_ARGS[@]}"
 fi
