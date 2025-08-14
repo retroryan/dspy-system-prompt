@@ -64,6 +64,24 @@ echo "Track order 12345" | ./run_demo.sh --query ecommerce
 ./run_demo.sh -d --query ecommerce "Search for gaming keyboards"
 ```
 
+### Conversation History Demo
+
+The project includes a demonstration of conversation history management that shows how to maintain context across multiple interactions:
+
+```bash
+# Run the conversation demo (shows context awareness across queries)
+poetry run python demo_conversation_history.py --demo conversation
+
+# Run the memory management demo (shows sliding window in action)
+poetry run python demo_conversation_history.py --demo memory
+```
+
+The conversation demo demonstrates:
+- **Context awareness**: Later queries build on information from earlier ones
+- **Intelligent summaries**: Extract agent creates summaries of removed trajectories
+- **Memory management**: Sliding window maintains recent interactions
+- **Clean integration**: Context passed as simple InputFields to existing agents
+
 ## What is the Agentic Loop?
 
 The agentic loop in this project demonstrates a manually controlled implementation of the DSPy React pattern, where we explicitly separate the React, Extract, and Observe phases for maximum control over execution:

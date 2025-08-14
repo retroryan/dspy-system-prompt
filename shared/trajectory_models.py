@@ -137,6 +137,10 @@ class Trajectory(BaseModel):
         default=5,
         description="Maximum allowed iterations"
     )
+    metadata: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Optional metadata for storing conversation context and other information"
+    )
     
     @property
     def is_complete(self) -> bool:
