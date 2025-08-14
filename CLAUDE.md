@@ -23,6 +23,8 @@ Claude must adhere to these principles:
 - **Easy to Understand**: The entire implementation can be grasped in minutes
 - **No Workarounds or Hacks**: Never implement compatibility layers, workarounds, or hacks. Always ask the user to handle edge cases, version conflicts, or compatibility issues directly
 - **Leverage LLM Intelligence**: Never create coordinate databases or mappings. The whole point of using an LLM is that it's smart enough to know geographic coordinates and extract them from place names. Creating explicit city-to-coordinate mappings is an anti-pattern that adds unnecessary complexity and defeats the purpose of using an intelligent model
+- **Preserve Custom React Implementation**: **IMPORTANT**: The custom React implementation in `agentic_loop/` is the core value of this project. It provides manual control over each iteration, external tool execution, and detailed observability. **Never suggest replacing it with DSPy's built-in ReAct** - the whole point is to have fine-grained control over the agent loop
+- **Preserve Tool Integration System**: **CRITICAL**: The current tool system with `BaseTool`, `ToolArgument`, and the registry pattern must be preserved. It provides type safety, validation, test cases, and external execution control. **Never suggest simplifying to DSPy's basic Tool wrapper** - the comprehensive tool system is essential for reliability and testability
 
 **IMPORTANT: If there is a question about something or a request requires a complex hack, always ask the user before implementing. Maintain simplicity over clever solutions.**
 
@@ -66,19 +68,23 @@ poetry run python -m agentic_loop.demo_react_agent ecommerce
 
 ## Architecture Overview
 
+**CRITICAL NOTE**: The custom React implementation is intentional and must be preserved. It is NOT a duplicate of DSPy's ReAct - it provides manual control that DSPy's ReAct doesn't offer.
+
 ### Core Components
 
 1. **agentic_loop/demo_react_agent.py**: Main demo script that orchestrates the React → Extract → Observe pattern with external control.
 
-2. **agentic_loop/react_agent.py**: Core DSPy module implementing the React pattern:
+2. **agentic_loop/react_agent.py**: **Custom React implementation** (DO NOT replace with dspy.ReAct):
    - Uses `dspy.Predict` for tool selection reasoning
    - Returns structured output with next_thought, next_tool_name, next_tool_args
    - Builds and maintains trajectory of all actions and observations
+   - **Enables manual control between iterations**
 
-3. **agentic_loop/extract_agent.py**: DSPy module for final answer synthesis:
+3. **agentic_loop/extract_agent.py**: **Custom extract implementation**:
    - Uses `dspy.ChainOfThought` to analyze complete trajectory
    - Synthesizes coherent final answer from all tool results
    - Returns reasoning and final answer
+   - **Provides visibility into reasoning process**
 
 4. **shared/models.py**: Core data models for the system:
    - `ToolCall`: Structure for tool invocation

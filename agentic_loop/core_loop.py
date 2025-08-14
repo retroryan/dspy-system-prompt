@@ -29,7 +29,7 @@ import dspy
 
 from agentic_loop.react_agent import ReactAgent
 from agentic_loop.extract_agent import ReactExtract
-from shared.llm_utils import save_dspy_history
+from shared.config import config
 from shared.tool_utils.registry import ToolRegistry
 from shared.trajectory_models import (
     Trajectory,
@@ -46,7 +46,7 @@ def run_react_loop(
     tool_registry: ToolRegistry,
     user_query: str,
     tool_set_name: str,
-    max_iterations: int = 5
+    max_iterations: int = None
 ) -> Trajectory:
     """
     Run the React agent loop with type-safe trajectory.
@@ -71,15 +71,16 @@ def run_react_loop(
     Returns:
         Complete Trajectory object with all steps and observations
     """
+    # Use config default if not specified
+    if max_iterations is None:
+        max_iterations = config.max_iterations
+    
     # Initialize trajectory
     trajectory = Trajectory(
         user_query=user_query,
         tool_set_name=tool_set_name,
         max_iterations=max_iterations
     )
-    
-    # Check if DSPY debug mode is enabled for saving prompts
-    dspy_debug_enabled = os.getenv("DSPY_DEBUG", "false").lower() == "true"
     
     logger.debug("Starting ReactAgent loop")
     logger.debug(f"Query: {user_query}")
@@ -96,18 +97,7 @@ def run_react_loop(
             user_query=user_query
         )
         
-        # Save ReactAgent history if debug mode is enabled
-        if dspy_debug_enabled:
-            try:
-                saved_path = save_dspy_history(
-                    tool_set_name=tool_set_name,
-                    agent_type="react",
-                    index=trajectory.iteration_count
-                )
-                if saved_path:
-                    logger.debug(f"Saved ReactAgent history to: {saved_path}")
-            except Exception as e:
-                logger.warning(f"Failed to save ReactAgent history: {e}")
+        # History saving removed - use dspy.inspect_history() for debugging
         
         # Get the last step that was just added
         last_step = trajectory.steps[-1]
@@ -197,9 +187,6 @@ def extract_final_answer(
     Returns:
         ExtractResult with answer, reasoning, confidence, and sources
     """
-    # Check if DEMO debug mode is enabled
-    demo_debug_enabled = os.getenv("DEMO_DEBUG", "false").lower() == "true"
-    
     logger.debug("Extracting final answer from trajectory")
     logger.debug(f"Trajectory has {trajectory.iteration_count} steps")
     
@@ -220,18 +207,7 @@ def extract_final_answer(
         user_query=user_query
     )
     
-    # Save ExtractAgent history if debug mode is enabled
-    if demo_debug_enabled:
-        try:
-            saved_path = save_dspy_history(
-                tool_set_name=tool_set_name,
-                agent_type="extract",
-                index=1  # Extract is typically called once at the end
-            )
-            if saved_path:
-                logger.debug(f"Saved ExtractAgent history to: {saved_path}")
-        except Exception as e:
-            logger.warning(f"Failed to save ExtractAgent history: {e}")
+    # History saving removed - use dspy.inspect_history() for debugging
     
     logger.debug("Successfully extracted final answer")
     
@@ -247,7 +223,7 @@ def run_agent_loop(
     tool_registry: ToolRegistry,
     tool_set_name: str,
     signature: Optional[dspy.Signature] = None,
-    max_iterations: int = 5
+    max_iterations: int = None
 ) -> Dict[str, Any]:
     """
     Run the complete agent loop: React → Extract → Observe.
@@ -278,6 +254,10 @@ def run_agent_loop(
         - error: Error message (if status is 'error')
     """
     try:
+        # Use config default if not specified
+        if max_iterations is None:
+            max_iterations = config.max_iterations
+        
         # Determine which signature to use
         if signature is None:
             # Try to get tool set specific signature

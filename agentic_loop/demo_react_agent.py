@@ -22,7 +22,6 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from shared import ConsoleFormatter, setup_llm
-from shared.llm_utils import save_dspy_history, get_full_history
 from agentic_loop.core_loop import run_agent_loop
 from shared.tool_utils.registry import ToolRegistry
 from tools.ecommerce.tool_set import EcommerceToolSet
@@ -348,20 +347,7 @@ def run_test_cases(tool_set_name: str, test_case_index: Optional[int] = None):
                 logger.info(f"\n{console.section_header('💭 Reasoning', char='-', width=60)}")
                 logger.info(result['reasoning'])
             
-            # Save history if DSPY debug is enabled
-            if dspy_debug_enabled:
-                try:
-                    history = get_full_history()
-                    saved_path = save_dspy_history(
-                        tool_set_name=tool_set_name,
-                        agent_type="full_session",
-                        index=i,
-                        history=history
-                    )
-                    if saved_path:
-                        logger.debug(f"Saved full session history to: {saved_path}")
-                except Exception as e:
-                    logger.warning(f"Failed to save full session history: {e}")
+            # History saving removed - use dspy.inspect_history() for debugging
         else:
             logger.error(console.error_message(f"Test failed: {result['error']}"))
         
