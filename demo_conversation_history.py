@@ -44,6 +44,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Reduce LiteLLM verbosity
+logging.getLogger('LiteLLM').setLevel(logging.WARNING)
+logging.getLogger('httpx').setLevel(logging.WARNING)
+
 
 # Define signatures with context fields
 class ConversationReactSignature(dspy.Signature):
@@ -101,6 +105,12 @@ def run_conversation_query(
     if context['has_summaries']:
         logger.info(f"📝 Summaries: {len(context['summaries'])} summary groups")
     
+    # Show if query requires context
+    context_indicators = ["that", "previous", "both", "those", "the same", "compared to", "all", "summarize"]
+    needs_context = any(indicator in user_query.lower() for indicator in context_indicators)
+    if needs_context and context['trajectory_count'] > 0:
+        logger.info(f"🔗 Query relies on previous context")
+    
     # Initialize trajectory with metadata
     trajectory = Trajectory(
         user_query=user_query,
@@ -127,8 +137,12 @@ def run_conversation_query(
         # Get last step
         last_step = trajectory.steps[-1]
         
-        # Log thought
-        logger.info(f"  💭 Iteration {iteration_num}: {last_step.thought.content[:100]}...")
+        # Log thought - truncate only if very long
+        thought_text = last_step.thought.content
+        if len(thought_text) > 150:
+            logger.info(f"  💭 Iteration {iteration_num}: {thought_text[:150]}...")
+        else:
+            logger.info(f"  💭 Iteration {iteration_num}: {thought_text}")
         
         # Check if finished
         if last_step.is_finish:
@@ -154,9 +168,12 @@ def run_conversation_query(
                         execution_time_ms=100  # Simplified for demo
                     )
                     
-                    # Log abbreviated result
-                    result_str = str(result)[:100] + "..." if len(str(result)) > 100 else str(result)
-                    logger.info(f"  📊 Result: {result_str}")
+                    # Log result - truncate only if very long
+                    result_str = str(result)
+                    if len(result_str) > 200:
+                        logger.info(f"  📊 Result: {result_str[:200]}...")
+                    else:
+                        logger.info(f"  📊 Result: {result_str}")
                     
                 except Exception as e:
                     logger.error(f"  ❌ Tool error: {e}")
@@ -192,7 +209,12 @@ def run_conversation_query(
         "iterations": trajectory.iteration_count
     }
     
-    logger.info(f"\n✨ Answer: {result['answer'][:200]}...")
+    # Log answer - truncate only if very long
+    answer_text = result['answer']
+    if len(answer_text) > 300:
+        logger.info(f"\n✨ Answer: {answer_text[:300]}...")
+    else:
+        logger.info(f"\n✨ Answer: {answer_text}")
     logger.info(f"⏱️  Time: {execution_time:.2f}s")
     
     return result
@@ -212,7 +234,8 @@ def run_demo_conversation():
     print("🌾 Agricultural Advisory Conversation Demo")
     print("="*80)
     print("\nThis demo shows how conversation history enables context-aware interactions.")
-    print("Watch how the agent remembers and builds on previous queries.\n")
+    print("Notice how each query uses pronouns and references that require previous context.")
+    print("Without conversation history, queries like 'that weather' or 'both cities' would fail.\n")
     
     # Setup LLM
     setup_llm()
@@ -242,13 +265,14 @@ def run_demo_conversation():
     )
     
     # Define conversation queries that build on each other
+    # Each query intentionally relies on context from previous queries
     queries = [
         "What's the current weather in Des Moines, Iowa?",
-        "Based on that weather, should I plant corn today?",
-        "What about the forecast for the next few days?",
-        "Compare the conditions to Omaha, Nebraska - which is better for planting?",
-        "What were the historical conditions this time last year in both cities?",
-        "Summarize all the weather data you've gathered and give me a final planting recommendation.",
+        "Based on that weather, should I plant corn today?",  # Refers to "that weather"
+        "What about the forecast for the next few days?",  # Continues from previous location
+        "Compare the conditions to Omaha, Nebraska - which is better for planting?",  # Compares to previously discussed location
+        "What were the historical conditions this time last year in both cities?",  # Refers to "both cities" from context
+        "Summarize all the weather data you've gathered and give me a final planting recommendation.",  # Needs all previous data
     ]
     
     # Process each query
@@ -288,12 +312,14 @@ def run_demo_conversation():
     print(f"\n{'='*80}")
     print("✅ Demo Complete!")
     print(f"{'='*80}")
-    print(f"\nKey Observations:")
-    print(f"1. The agent maintained context across {len(queries)} queries")
-    print(f"2. Later queries built on information from earlier ones")
-    print(f"3. Context was passed as simple InputFields to existing agents")
-    print(f"4. No wrappers or modifications to agents were needed")
-    print(f"5. The demo clearly shows conversation continuity\n")
+    print(f"\nKey Advantages of Conversation History:")
+    print(f"1. **Natural language references work**: 'that weather', 'both cities', 'the same'")
+    print(f"2. **Contextual understanding**: Agent knows what you're referring to")
+    print(f"3. **Progressive refinement**: Each query builds on previous knowledge")
+    print(f"4. **No repeated questions**: Agent remembers what it already looked up")
+    print(f"5. **Clean implementation**: Just InputFields, no complex wrappers")
+    print(f"\nWithout conversation history, most of these queries would fail or require")
+    print(f"repeating all information in every query!\n")
 
 
 def run_memory_management_demo():
@@ -307,7 +333,8 @@ def run_memory_management_demo():
     print("💾 Memory Management Demo")
     print("="*80)
     print("\nThis demo shows sliding window memory management in action.")
-    print("Watch what happens when we exceed max_trajectories=3.\n")
+    print("Watch what happens when we exceed max_trajectories=3.")
+    print("Key point: Later queries reference ALL previous cities through summaries.\n")
     
     # Setup
     setup_llm()
@@ -337,12 +364,13 @@ def run_memory_management_demo():
     )
     
     # Run 5 queries to trigger window management
+    # Each query builds on previous context to show the value of summaries
     queries = [
-        "What's the weather in Chicago?",
-        "What's the weather in Detroit?",
-        "What's the weather in Milwaukee?",
-        "What's the weather in Cleveland?",  # This triggers window
-        "What's the weather in Indianapolis?",
+        "What's the current temperature in Chicago?",
+        "Is it warmer in Detroit than the previous city?",  # Refers to Chicago from context
+        "How does Milwaukee compare to those two?",  # Refers to both previous cities
+        "Add Cleveland to the comparison - which city is warmest?",  # Triggers window, needs summary
+        "Now include Indianapolis - rank all the cities by temperature.",  # Needs summary of removed trajectories
     ]
     
     for i, query in enumerate(queries, 1):
@@ -367,7 +395,8 @@ def run_memory_management_demo():
               f"{len(conversation_history.summaries)} summaries")
         
         if conversation_history.summaries:
-            print(f"Latest summary: {conversation_history.summaries[-1].summary_text[:100]}...")
+            summary_text = conversation_history.summaries[-1].summary_text
+            print(f"Latest summary: {summary_text}")
     
     print(f"\n{'='*80}")
     print("Memory Management Results:")
@@ -375,6 +404,15 @@ def run_memory_management_demo():
     print(f"- Maintaining {len(conversation_history.trajectories)} active trajectories")
     print(f"- Created {len(conversation_history.summaries)} summaries")
     print(f"- Window triggered when exceeding max_trajectories={history_config.max_trajectories}")
+    
+    print(f"\n{'='*80}")
+    print("Key Insights:")
+    print(f"{'='*80}")
+    print("1. **Context preserved**: Even after window trigger, agent remembers all cities")
+    print("2. **Intelligent summaries**: Extract agent creates meaningful summaries")
+    print("3. **Queries rely on context**: 'previous city', 'those two', 'all cities'")
+    print("4. **Scalable memory**: Can handle long conversations without unbounded growth")
+    print("\nTry running without context - these queries would be impossible to answer!")
 
 
 if __name__ == "__main__":
