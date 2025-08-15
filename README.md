@@ -108,8 +108,8 @@ The project uses `AgentSession` as the single, unified interface for all agent i
 ```python
 from agentic_loop.session import AgentSession
 
-# Create a session - always-on conversation history
-session = AgentSession("ecommerce")
+# Create a session with user identity - always-on conversation history
+session = AgentSession("ecommerce", user_id="demo_user")
 
 # Simple, consistent API
 result = session.query("Find laptops under $1000")
@@ -123,6 +123,51 @@ print(f"Tools used: {', '.join(result.tools_used)}")
 - **Automatic context management** - conversation history just works
 - **Type-safe results** - `SessionResult` provides structured output
 - **Memory management** - sliding window with intelligent summarization
+- **User identity management** - automatic user context injection for tools
+
+### User Identity Management
+
+The session-based architecture provides clean, automatic user identity management:
+
+**Session-Level User Management:**
+- Each `AgentSession` is created with a specific `user_id` (defaults to "demo_user" for demos)
+- The session becomes the single source of truth for user identity
+- No user IDs needed in tool arguments - completely separated from business logic
+
+**Automatic User Context Injection:**
+The system automatically injects user context where needed using a two-method tool architecture:
+
+```python
+# Tools implement either execute() OR execute_with_user_id()
+
+class SearchProductsTool(BaseTool):
+    def execute(self, query: str, category: str = None) -> dict:
+        # No user context needed - anyone can search products
+        return search_catalog(query, category)
+
+class AddToCartTool(BaseTool):
+    def execute_with_user_id(self, user_id: str, product_id: str, quantity: int) -> dict:
+        # User context required - add to specific user's cart
+        return add_product_to_user_cart(user_id, product_id, quantity)
+```
+
+**Runtime User ID Injection:**
+The core loop automatically detects tool requirements and provides user context:
+
+```python
+# In core_loop.py - automatic runtime detection
+if hasattr(tool, 'execute_with_user_id'):
+    result = tool.execute_with_user_id(session_user_id, **tool_args)
+else:
+    result = tool.execute(**tool_args)
+```
+
+**Benefits:**
+- ✅ **Clean Separation**: Business logic (tool args) separate from infrastructure (user ID)
+- ✅ **Zero Configuration**: Tools declare their user context needs, injection is automatic
+- ✅ **Type Safety**: Clear method signatures distinguish user-context vs non-user-context tools
+- ✅ **No Agent Confusion**: React agents never generate user IDs - session manages identity
+- ✅ **Consistent Identity**: Same user ID across all operations in a session
 
 ### The Agentic Loop
 
@@ -244,21 +289,6 @@ Key configuration options in `.env`:
 └── run_demo.sh              # Main demo runner script
 ```
 
-## Development
-
-### Adding New Tools
-
-1. Create a tool class inheriting from `BaseTool`
-2. Add to appropriate tool set in `tools/*/tool_set.py`
-3. Include test cases with expected tools
-4. Test with: `./run_demo.sh your_tool_set`
-
-### Creating Custom Tool Sets
-
-1. Subclass `ToolSet` in your tool directory
-2. Define tool classes and test cases
-3. Register in `demo_runner.py` TOOL_SETS
-4. Test with the demo runner
 
 ## Troubleshooting
 
