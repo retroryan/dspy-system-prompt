@@ -123,20 +123,32 @@ class BaseTool(BaseModel, ABC):
             for arg in self.arguments
         ]
     
-    @abstractmethod
     def execute(self, **kwargs) -> str:
         """
-        Abstract method that must be implemented by all concrete tool classes.
-        This method contains the core logic of the tool.
+        Method for tools that don't require user context.
+        Override this OR execute_with_user_id, not both.
 
         Args:
-            **kwargs: The arguments required for the tool's execution,
-                      which will have been validated by 'args_model' if provided.
+            **kwargs: The arguments required for the tool's execution.
 
         Returns:
             A formatted string containing the result of the tool's operation.
         """
-        pass
+        raise NotImplementedError("Tool must implement either execute() or execute_with_user_id()")
+
+    def execute_with_user_id(self, user_id: str, **kwargs) -> str:
+        """
+        Method for tools that require user context.
+        Override this OR execute, not both.
+
+        Args:
+            user_id: The user identifier for personalized operations
+            **kwargs: The arguments required for the tool's execution.
+
+        Returns:
+            A formatted string containing the result of the tool's operation.
+        """
+        raise NotImplementedError("Tool must implement either execute() or execute_with_user_id()")
     
     def validate_and_execute(self, **kwargs) -> str:
         """

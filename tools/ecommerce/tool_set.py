@@ -17,17 +17,14 @@ class EcommerceReactSignature(dspy.Signature):
     """E-commerce tool execution requirements.
     
     CURRENT DATE: {current_date}
-    CURRENT USER: demo_user (use this as user_id for all operations requiring user context)
 
     E-COMMERCE GUIDELINES:
     - Always use specific identifiers when referencing orders, products, or customers
     - For product searches, be flexible with search terms and filters
     - When tracking orders, use exact order IDs when provided
-    - IMPORTANT: Always include user_id="demo_user" when calling tools that require user context
     
     ORDER MANAGEMENT PRECISION:
     - Order IDs typically follow patterns like "ORD123", "ORD001", or alphanumeric codes
-    - Always use user_id="demo_user" for order operations (track_order, list_orders, get_order, return_item)
     - Product SKUs are usually alphanumeric codes
     - Tracking numbers may have various formats depending on carrier
     
@@ -44,7 +41,6 @@ class EcommerceReactSignature(dspy.Signature):
     - Handle edge cases like expired return windows
     
     CART OPERATIONS:
-    - Always use user_id="demo_user" for cart operations (add_to_cart, get_cart, remove_from_cart, etc.)
     - Validate product availability before adding to cart
     - Handle quantity specifications properly
     - Support multiple items in single operations when applicable
@@ -144,40 +140,67 @@ class EcommerceToolSet(ToolSet):
     @classmethod
     def get_test_cases(cls) -> List[ToolSetTestCase]:
         """
-        Returns a predefined list of test cases for e-commerce scenarios.
+        Returns 10 complex test cases that demonstrate conversation history and memory management.
         
-        These cases cover various interactions with e-commerce tools, including
-        order management, product search, cart operations, and customer support.
+        These cases are designed to build on each other, showing how the system
+        maintains context across interactions and manages memory efficiently.
+        All test cases use actual data from the database for demo_user.
         """
-        # Basic test cases
-        basic_cases = [
+        # Complex conversation-driven test cases using actual data
+        test_cases = [
+            # Test 1: Start with order history - demo_user has 25 orders
             ToolSetTestCase(
-                request="I want to check my order status for order ORD001",
-                expected_tools=["track_order"],
-                expected_arguments={
-                    "track_order": {
-                        "user_id": "demo_user",
-                        "order_id": "ORD001"
-                    }
-                },
-                description="Check specific order status",
-                tool_set=cls.NAME,
-                scenario="order_management"
-            ),
-            ToolSetTestCase(
-                request="Show me all orders for demo_user",
+                request="Show me all my recent orders and tell me which ones are delivered",
                 expected_tools=["list_orders"],
                 expected_arguments={
                     "list_orders": {
                         "user_id": "demo_user"
                     }
                 },
-                description="List customer orders",
+                description="Initial order history query - establishes context with real orders",
                 tool_set=cls.NAME,
-                scenario="order_management"
+                scenario="conversation_with_memory"
             ),
+            # Test 2: Reference previous context - ORD003 ($1199.98) is most expensive  
             ToolSetTestCase(
-                request="Add product KB123 to my cart",
+                request="Show me details of the most expensive order from those",
+                expected_tools=["get_order"],
+                expected_arguments={},
+                description="Context-dependent detail retrieval - should find ORD003 ($1199.98)",
+                tool_set=cls.NAME,
+                scenario="conversation_with_memory"
+            ),
+            # Test 3: Track specific high-value delivered order
+            ToolSetTestCase(
+                request="Track the status of order ORD004 - the one with the gaming laptop",
+                expected_tools=["track_order"],
+                expected_arguments={
+                    "track_order": {
+                        "user_id": "demo_user",
+                        "order_id": "ORD004"
+                    }
+                },
+                description="Track specific delivered order with Gaming Laptop ($899.99)",
+                tool_set=cls.NAME,
+                scenario="conversation_with_memory"
+            ),
+            # Test 4: Start shopping - search for available products
+            ToolSetTestCase(
+                request="I need a new keyboard. Show me gaming keyboards under $150",
+                expected_tools=["search_products"],
+                expected_arguments={
+                    "search_products": {
+                        "query": "gaming keyboard",
+                        "max_price": 150
+                    }
+                },
+                description="Product search - KB123, KB456, KB789 are available",
+                tool_set=cls.NAME,
+                scenario="conversation_with_memory"
+            ),
+            # Test 5: Add specific product to cart
+            ToolSetTestCase(
+                request="Add the RGB mechanical keyboard KB123 to my cart",
                 expected_tools=["add_to_cart"],
                 expected_arguments={
                     "add_to_cart": {
@@ -185,57 +208,37 @@ class EcommerceToolSet(ToolSet):
                         "product_sku": "KB123"
                     }
                 },
-                description="Add item to shopping cart",
+                description="Add specific product KB123 ($129.99) to cart",
                 tool_set=cls.NAME,
-                scenario="shopping"
+                scenario="conversation_with_memory"
             ),
+            # Test 6: Continue shopping with context
             ToolSetTestCase(
-                request="Search for wireless headphones under $100",
+                request="Now find me a mouse to go with that keyboard, preferably wireless",
                 expected_tools=["search_products"],
+                expected_arguments={},
+                description="Continue shopping - MS001 and MS002 mice available",
+                tool_set=cls.NAME,
+                scenario="conversation_with_memory"
+            ),
+            # Test 7: Check cart and analyze total
+            ToolSetTestCase(
+                request="What's in my cart now and what's the total?",
+                expected_tools=["get_cart"],
                 expected_arguments={
-                    "search_products": {
-                        "query": "wireless headphones",
-                        "max_price": 100
+                    "get_cart": {
+                        "user_id": "demo_user"
                     }
                 },
-                description="Product search with price filter",
+                description="Check cart contents and total after multiple additions",
                 tool_set=cls.NAME,
-                scenario="shopping"
+                scenario="conversation_with_memory"
             ),
+            # Test 8: Return scenario with actual order
             ToolSetTestCase(
-                request="Track my order ORD002",
-                expected_tools=["track_order"],
+                request="I want to return the headphones from order ORD002 because they're defective",
+                expected_tools=["return_item"],
                 expected_arguments={
-                    "track_order": {
-                        "user_id": "demo_user",
-                        "order_id": "ORD002"
-                    }
-                },
-                description="Track shipment status",
-                tool_set=cls.NAME,
-                scenario="order_management"
-            ),
-            ToolSetTestCase(
-                request="Get details for order ORD003",
-                expected_tools=["get_order"],
-                expected_arguments={
-                    "get_order": {
-                        "user_id": "demo_user",
-                        "order_id": "ORD003"
-                    }
-                },
-                description="Retrieve order details",
-                tool_set=cls.NAME,
-                scenario="order_management"
-            ),
-            ToolSetTestCase(
-                request="Return item HD001 from order ORD002 because it's defective",
-                expected_tools=["get_order", "return_item"],
-                expected_arguments={
-                    "get_order": {
-                        "user_id": "demo_user",
-                        "order_id": "ORD002"
-                    },
                     "return_item": {
                         "user_id": "demo_user",
                         "order_id": "ORD002",
@@ -243,170 +246,36 @@ class EcommerceToolSet(ToolSet):
                         "reason": "defective"
                     }
                 },
-                description="Return defective item",
+                description="Return HD001 Wireless Headphones Pro from ORD002",
                 tool_set=cls.NAME,
-                scenario="customer_support"
+                scenario="conversation_with_memory"
             ),
+            # Test 9: Checkout the cart
             ToolSetTestCase(
-                request="I need to find laptops in my price range and add one to my cart",
-                expected_tools=["search_products"],
-                expected_arguments={
-                    "search_products": {
-                        "query": "laptops"
-                    }
-                },
-                description="Multi-step shopping process - search phase",
-                tool_set=cls.NAME,
-                scenario="shopping"
-            ),
-            ToolSetTestCase(
-                request="Find bluetooth speakers under $50",
-                expected_tools=["search_products"],
-                expected_arguments={
-                    "search_products": {
-                        "query": "bluetooth speakers",
-                        "max_price": 50
-                    }
-                },
-                description="Product search with specific category and price",
-                tool_set=cls.NAME,
-                scenario="shopping"
-            ),
-            ToolSetTestCase(
-                request="Check the status of order ORD004 and get full order details",
-                expected_tools=["get_order"],
-                expected_arguments={
-                    "get_order": {
-                        "user_id": "demo_user",
-                        "order_id": "ORD004"
-                    }
-                },
-                description="Comprehensive order inquiry",
-                tool_set=cls.NAME,
-                scenario="order_management"
-            ),
-            ToolSetTestCase(
-                request="List all my recent orders and track the latest one",
-                expected_tools=["list_orders", "track_order"],
-                expected_arguments={
-                    "list_orders": {
-                        "user_id": "demo_user"
-                    }
-                },
-                description="Recent orders with tracking follow-up",
-                tool_set=cls.NAME,
-                scenario="order_management"
-            ),
-            ToolSetTestCase(
-                request="Search for gaming keyboards and add the best one under $150 to cart",
-                expected_tools=["search_products", "add_to_cart"],
-                expected_arguments={
-                    "search_products": {
-                        "query": "gaming keyboards",
-                        "max_price": 150
-                    }
-                },
-                description="Product search with intent to purchase",
-                tool_set=cls.NAME,
-                scenario="shopping"
-            )
-        ]
-        
-        # Complex test scenarios (from run_demo_ecom.sh)
-        complex_cases = [
-            ToolSetTestCase(
-                request="I have a budget of $1500. I need to buy a laptop for work and a wireless mouse. Find the best laptop under my budget, add it to my cart with a compatible mouse, and then checkout to 789 Tech Ave.",
-                expected_tools=["search_products", "add_to_cart", "checkout"],
+                request="Checkout my cart and ship it to 789 Tech Ave, Demo City, CA 90210",
+                expected_tools=["checkout"],
                 expected_arguments={
                     "checkout": {
                         "user_id": "demo_user",
-                        "shipping_address": "789 Tech Ave"
+                        "shipping_address": "789 Tech Ave, Demo City, CA 90210"
                     }
                 },
-                description="Multi-step purchase with budget constraints",
+                description="Complete checkout with accumulated cart items",
                 tool_set=cls.NAME,
-                scenario="complex_shopping"
+                scenario="conversation_with_memory"
             ),
+            # Test 10: Summary requiring full memory
             ToolSetTestCase(
-                request="Compare gaming keyboards under $150 and wireless headphones under $100. Add the highest-rated item from each category to my cart, but only if the total stays under $200.",
-                expected_tools=["search_products", "add_to_cart", "get_cart"],
+                request="Summarize everything we did: what orders we reviewed, what I bought, what I returned",
+                expected_tools=[],
                 expected_arguments={},
-                description="Comparative shopping with price optimization",
+                description="Full conversation summary testing complete memory retention",
                 tool_set=cls.NAME,
-                scenario="complex_shopping"
-            ),
-            ToolSetTestCase(
-                request="For user demo_user, check the status of their most recent order. If it's been delivered and contains any electronics over $500, initiate a return for the most expensive item citing 'changed mind'.",
-                expected_tools=["list_orders", "track_order", "get_order", "return_item"],
-                expected_arguments={},
-                description="Order tracking and conditional return processing",
-                tool_set=cls.NAME,
-                scenario="complex_support"
-            ),
-            ToolSetTestCase(
-                request="I want to buy 2 wireless mice and 1 mechanical keyboard. Add them to my cart.",
-                expected_tools=["search_products", "add_to_cart"],
-                expected_arguments={},
-                description="Multiple product purchase",
-                tool_set=cls.NAME,
-                scenario="complex_shopping"
-            ),
-            ToolSetTestCase(
-                request="For user demo_user, list all their delivered orders from the past month. For any order over $300, check if it contains laptops or monitors, and if so, process a return for quality issues and tell me the expected refund amount.",
-                expected_tools=["list_orders", "get_order", "return_item"],
-                expected_arguments={},
-                description="Complex return with refund verification",
-                tool_set=cls.NAME,
-                scenario="complex_support"
-            ),
-            ToolSetTestCase(
-                request="I need to buy a laptop under $1000 and gaming accessories under $200. Add them to my cart and calculate the total.",
-                expected_tools=["search_products", "add_to_cart", "get_cart"],
-                expected_arguments={},
-                description="Multi-product shopping with budget",
-                tool_set=cls.NAME,
-                scenario="complex_shopping"
-            ),
-            ToolSetTestCase(
-                request="Check what's currently in my cart. If the total is over $500 and includes any out-of-stock items, remove them and suggest similar alternatives that are in stock.",
-                expected_tools=["get_cart", "remove_from_cart", "search_products", "add_to_cart"],
-                expected_arguments={},
-                description="Abandoned cart recovery with alternatives",
-                tool_set=cls.NAME,
-                scenario="complex_cart"
-            ),
-            ToolSetTestCase(
-                request="For user demo_user, review their last 5 orders and identify the most frequently purchased category. Then search for new products in that category and add the top-rated one to their cart if it's different from what they've bought before.",
-                expected_tools=["list_orders", "get_order", "search_products", "add_to_cart"],
-                expected_arguments={},
-                description="Order history analysis with reorder",
-                tool_set=cls.NAME,
-                scenario="complex_personalization"
-            ),
-            ToolSetTestCase(
-                request="I'm setting up a home office. Find a laptop, monitor, keyboard, and mouse that are all compatible and stay within a $2000 budget. Prioritize items that are frequently bought together.",
-                expected_tools=["search_products", "add_to_cart", "get_cart"],
-                expected_arguments={},
-                description="Bundle shopping with compatibility check",
-                tool_set=cls.NAME,
-                scenario="complex_shopping"
-            ),
-            ToolSetTestCase(
-                request="I received order ORD012 but one item was damaged. First check the order details, then process a return for the damaged item with reason 'arrived damaged', and add a replacement to my cart for immediate reorder.",
-                expected_tools=["get_order", "return_item", "search_products", "add_to_cart"],
-                expected_arguments={
-                    "get_order": {
-                        "user_id": "demo_user",
-                        "order_id": "ORD012"
-                    }
-                },
-                description="Customer service escalation flow",
-                tool_set=cls.NAME,
-                scenario="complex_support"
+                scenario="conversation_with_memory"
             )
         ]
         
-        return basic_cases + complex_cases
+        return test_cases
     
     @classmethod
     def get_react_signature(cls) -> Type[dspy.Signature]:

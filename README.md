@@ -1,14 +1,16 @@
 # DSPy Agentic Loop Demo
 
-A comprehensive example demonstrating how to use DSPy with an agentic loop architecture for multi-tool selection and execution. This project showcases a manually controlled React-style agent loop using DSPy's Chain-of-Thought reasoning, where we explicitly control the React → Extract workflow pattern. This architecture is designed to enable future integration with durable execution frameworks while maintaining full control over the reasoning and action selection process.
+A comprehensive example demonstrating how to use DSPy with an agentic loop architecture for multi-tool selection and execution. This project showcases a manually controlled React-style agent loop using DSPy's Chain-of-Thought reasoning, where we explicitly control the React → Extract workflow pattern with always-on conversation history management.
 
 The implementation features:
-- Type-safe tool registry with Pydantic models for structured input/output
-- Manual control over the React (reason → act → observe) loop using DSPy
-- Activity management for execution control and metrics
-- Support for multiple LLM providers (Ollama, Claude, OpenAI, Gemini)
-- Tool sets for different domains (e-commerce, events, treasure hunt, productivity, weather)
-- Weather tool set currently uses [Open Meteo](https://open-meteo.com/) (shout out for the great API!) with MCP server integration coming soon
+- **Session-based architecture** with `AgentSession` as the single entry point for all agent interactions
+- **Always-on conversation history** with automatic context management and sliding window memory
+- **Unified demo runner** supporting test cases, custom queries, and interactive demos
+- **Type-safe tool registry** with Pydantic models for structured input/output
+- **Manual control** over the React (reason → act → observe) loop using DSPy
+- **Performance metrics** tracking execution time, iterations, and tool usage
+- **Support for multiple LLM providers** (Ollama, Claude, OpenAI, Gemini)
+- **Tool sets for different domains** (agriculture/weather, e-commerce with 22 test cases, events)
 
 ## Quick Start
 
@@ -34,316 +36,182 @@ ollama pull gemma3:27b
 
 ### Run the Demo
 
-The project provides a unified `run_demo.sh` script that supports both test cases and custom queries:
+The project provides a unified `run_demo.sh` script that supports multiple modes:
+
+#### Test Mode (Default) - Run Predefined Test Cases
 
 ```bash
-# Run default test cases (agriculture tool set)
-./run_demo.sh
+# Run all test cases for a tool set
+./run_demo.sh                        # Agriculture test cases (default)
+./run_demo.sh ecommerce              # All 22 ecommerce test cases
+./run_demo.sh events                 # Events test cases
 
-# Run specific tool set test cases
-./run_demo.sh ecommerce              # Run all e-commerce test cases
-./run_demo.sh agriculture            # Run all agriculture test cases
-./run_demo.sh events                 # Run all events test cases
+# Run specific test case
+./run_demo.sh ecommerce 13           # Complex multi-step purchase scenario
+./run_demo.sh agriculture 5          # Specific agriculture test
 
-# Run a specific test case
-./run_demo.sh ecommerce 3            # Run test case #3 from e-commerce
-./run_demo.sh agriculture 5          # Run test case #5 from agriculture
+# With verbose output (shows agent thoughts and iterations)
+./run_demo.sh --verbose ecommerce 2
+./run_demo.sh -v ecommerce 13        # See detailed reasoning for complex scenario
+```
 
+#### Query Mode - Custom Queries
+
+```bash
 # Run custom queries
 ./run_demo.sh --query agriculture "What's the weather in NYC?"
-./run_demo.sh --query ecommerce "Find laptops under $1000"
+./run_demo.sh -q ecommerce "Find laptops under $1000"
 echo "Track order 12345" | ./run_demo.sh --query ecommerce
 
-# Verbose mode (shows agent thoughts and tool execution details)
-./run_demo.sh --verbose              # Verbose test cases
-./run_demo.sh -v ecommerce          # Verbose e-commerce tests
-./run_demo.sh --verbose --query agriculture "Compare weather in Tokyo and Paris"
-
-# Debug mode (shows full DSPy prompts and LLM responses)
-./run_demo.sh --debug                # Full debug output
-./run_demo.sh -d --query ecommerce "Search for gaming keyboards"
+# With verbose output
+./run_demo.sh --verbose --query ecommerce "Compare gaming keyboards"
 ```
 
-### Conversation History Demo
-
-The project includes a demonstration of conversation history management that shows how to maintain context across multiple interactions:
+#### Demo Modes - Interactive Demonstrations
 
 ```bash
-# Run the conversation demo (shows context awareness across queries)
-poetry run python demo_conversation_history.py --demo conversation
+# Basic single-query demos
+./run_demo.sh basic                  # Agriculture tools (default)
+./run_demo.sh basic ecommerce        # Ecommerce tools
+./run_demo.sh basic events           # Events tools
 
-# Run the memory management demo (shows sliding window in action)
-poetry run python demo_conversation_history.py --demo memory
+# Conversation demo (multi-turn with context)
+./run_demo.sh conversation           # Agriculture (default)
+./run_demo.sh conversation ecommerce # Ecommerce context demo
+
+# Memory management demo (sliding window)
+./run_demo.sh memory                 # Shows memory management in action
 ```
 
-The conversation demo demonstrates:
-- **Context awareness**: Later queries build on information from earlier ones
-- **Intelligent summaries**: Extract agent creates summaries of removed trajectories
-- **Memory management**: Sliding window maintains recent interactions
-- **Clean integration**: Context passed as simple InputFields to existing agents
+#### Options
 
-## What is the Agentic Loop?
+```bash
+--verbose, -v    Show detailed agent thoughts, tool execution, and iteration details
+--debug, -d      Enable full DSPy debug output (very verbose!)
+--help, -h       Show comprehensive help with all options
+```
 
-The agentic loop in this project demonstrates a manually controlled implementation of the DSPy React pattern, where we explicitly separate the React, Extract, and Observe phases for maximum control over execution:
+### Important Notes
 
-### Flow Diagram
+**DSPy Warning**: You may see warnings like:
+```
+WARNING dspy.predict.predict: Not all input fields were provided to module. Present: ['user_query', 'trajectory']. Missing: ['conversation_context'].
+```
+This is expected behavior when the conversation context is empty (e.g., for the first query in a session). The warning comes from DSPy's internal validation and can be safely ignored - the system handles empty context correctly.
+
+## Architecture Overview
+
+### Session-Based Architecture
+
+The project uses `AgentSession` as the single, unified interface for all agent interactions:
+
+```python
+from agentic_loop.session import AgentSession
+
+# Create a session - always-on conversation history
+session = AgentSession("ecommerce")
+
+# Simple, consistent API
+result = session.query("Find laptops under $1000")
+print(f"Answer: {result.answer}")
+print(f"Time: {result.execution_time:.2f}s")
+print(f"Tools used: {', '.join(result.tools_used)}")
+```
+
+**Key Benefits:**
+- **ONE way to interact** - no multiple APIs or wrappers
+- **Automatic context management** - conversation history just works
+- **Type-safe results** - `SessionResult` provides structured output
+- **Memory management** - sliding window with intelligent summarization
+
+### The Agentic Loop
+
+The agentic loop implements the React → Extract → Observe pattern with manual control:
 
 ```
 User Query
     ↓
 ┌─────────────────────────────────────┐
+│ AgentSession                        │
+│ - Manages conversation history      │
+│ - Provides context to agents        │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
 │ React Phase (ReactAgent)            │
 │ - Uses dspy.Predict                 │
-│ - Returns: thought, tool_name, args │
+│ - Considers conversation context    │
+│ - Returns: thought, tool, args      │
 └─────────────────────────────────────┘
     ↓
 ┌─────────────────────────────────────┐
-│ External Controller                 │
-│ (demo_react_agent.py)               │
+│ External Tool Execution             │
 │ - Execute selected tool             │
 │ - Add results to trajectory         │
-│ - Decide: continue or finish?       │
+│ - Continue or finish?               │
 └─────────────────────────────────────┘
-    ↓ (if tool_name != "finish")
-    ↑ (loop until "finish")
-    ↓ (when "finish" selected)
+    ↓ (loop until "finish")
 ┌─────────────────────────────────────┐
-│ Extract Phase (ReactExtract)        │
+│ Extract Phase                       │
 │ - Uses dspy.ChainOfThought          │
-│ - Analyzes complete trajectory      │
 │ - Synthesizes final answer          │
-└─────────────────────────────────────┘
-    ↓
-┌─────────────────────────────────────┐
-│ Observe Phase                       │
-│ - Returns final observer output     │
+│ - Considers full context            │
 └─────────────────────────────────────┘
     ↓
 Final Answer
 ```
 
-### React Phase (Tool Selection)
-The React agent uses `dspy.Predict` to reason about the user's request and available tools, then returns:
-- **next_thought**: The agent's reasoning about what to do next
-- **next_tool_name**: Which tool to execute (or "finish" to complete the task)
-- **next_tool_args**: Arguments for the selected tool in JSON format
+## Tool Sets and Test Cases
 
-The React phase builds a trajectory dictionary containing all thoughts, tool calls, and observations across iterations.
+### Agriculture/Weather Tool Set
+- **Tools**: Weather forecast, current conditions, historical data, agricultural conditions
+- **Test Cases**: 9 scenarios including multi-city comparisons and planting recommendations
 
-### External Tool Execution Control
-Unlike traditional ReAct where tool execution happens inside the agent, the external controller (`demo_react_agent.py`) decides whether to:
-- Execute the selected tool and add results to the trajectory
-- Continue the React loop for another iteration
-- Handle errors and timeouts
-- Manage the overall workflow
+### E-commerce Tool Set (22 Test Cases)
+- **Tools**: Product search, cart management, checkout, order tracking, returns
+- **Basic Scenarios** (1-12): Simple operations like search, add to cart, track orders
+- **Complex Scenarios** (13-22): 
+  - Multi-step purchases with budget constraints
+  - Comparative shopping with price optimization
+  - Conditional returns based on order analysis
+  - Cart recovery with inventory management
+  - Personalized recommendations based on history
 
-### Extract Phase (Answer Synthesis)
-After the React loop completes, the Extract agent uses `dspy.ChainOfThought` to:
-- Analyze the complete trajectory of thoughts, tool calls, and results
-- Synthesize a final answer based on all gathered information
-- Provide reasoning for the final response
+### Events Tool Set
+- **Tools**: Event search, creation, cancellation
+- **Test Cases**: Event planning and management scenarios
 
-### Observe Phase (Final Output)
-The Extract phase returns an observer that provides the final output, completing the React → Extract → Observe pattern.
+## Performance Features
 
-### Key Advantages
+When running with `--verbose`, the system provides detailed metrics:
 
-This manual control approach provides several advantages:
-- **Durable Execution Ready**: Each phase can be checkpointed and resumed, making it suitable for integration with workflow engines like Temporal
-- **External Control**: The orchestrating code has full control over tool execution, error handling, and flow decisions
-- **Explicit State Management**: The trajectory is fully observable and can be persisted between executions
-- **Fine-grained Control**: You can inject business logic, validation, or custom handling between any step
-- **Debugging & Monitoring**: Clear separation makes it easier to debug issues and monitor agent behavior
+- **Iteration Details**: See each step of the agent's reasoning
+- **Tool Execution**: Track which tools were called and their results
+- **Performance Metrics**: 
+  - Execution time per iteration
+  - Total completion time
+  - Number of iterations used
+  - Tools invoked and their sequence
 
-The implementation follows DSPy's React → Extract → Observe pattern but with external orchestration:
-- **ReactAgent**: DSPy module that performs reasoning and tool selection using `dspy.Predict`
-- **External Controller**: Manages the loop, executes tools, and decides when to continue or finish
-- **ReactExtract**: DSPy module that synthesizes final answers using `dspy.ChainOfThought`
-- **Observer**: Final output phase that returns the completed result
+## Advanced Features
 
-This architecture bridges the gap between LLM reasoning and production systems that require reliability, observability, and durability.
+### Conversation History Management
 
-## Detailed Usage
+The system maintains conversation history automatically:
+- **Sliding Window**: Configurable window size for active trajectories
+- **Intelligent Summarization**: Older trajectories are summarized to preserve context
+- **Memory Efficiency**: Scales to long conversations without memory explosion
 
-### Running Test Cases
+### Test Case Validation
 
-Each tool set includes predefined test cases that demonstrate various scenarios:
-
-```bash
-# View all test cases for a tool set
-./run_demo.sh ecommerce              # Shows all 22 test cases including complex scenarios
-./run_demo.sh agriculture            # Shows all 9 weather-related test cases
-
-# Run specific test cases
-./run_demo.sh ecommerce 1            # Basic product search
-./run_demo.sh ecommerce 13           # Complex multi-step purchase with budget
-./run_demo.sh agriculture 7          # Multi-city weather comparison
-```
-
-### Running Custom Queries
-
-Use the `--query` flag to run your own queries:
-
-```bash
-# Weather queries
-./run_demo.sh --query agriculture "What's the weather forecast for Los Angeles this week?"
-./run_demo.sh --query agriculture "Are conditions good for planting tomatoes in Chicago?"
-./run_demo.sh --query agriculture "Compare the weather in Tokyo and Paris"
-
-# E-commerce queries
-./run_demo.sh --query ecommerce "Search for wireless headphones under $100"
-./run_demo.sh --query ecommerce "Add product LAPTOP-15 to my cart"
-./run_demo.sh --query ecommerce "Track order ORD-123"
-
-# Complex e-commerce scenarios
-./run_demo.sh --query ecommerce "I have a budget of $1500. Find and add a laptop and mouse to my cart"
-./run_demo.sh --query ecommerce "Compare gaming keyboards under $150 and add the best one to cart"
-
-# Event management queries
-./run_demo.sh --query events "Find tech conferences in San Francisco next month"
-./run_demo.sh --query events "Create a team meeting for next Friday at 2pm"
-```
-
-### Tool Sets Available
-
-#### Agriculture/Weather Tool Set
-
-Provides comprehensive weather information for agricultural and general use:
-
-Available tools:
-- `get_agricultural_conditions`: Current conditions with agricultural metrics (soil moisture, UV index)
-- `get_weather_forecast`: Multi-day weather forecasts with temperature and precipitation
-- `get_historical_weather`: Historical weather data for past date ranges
-
-Example test scenarios:
-- Weather forecasts with umbrella recommendations
-- Agricultural planting condition assessments
-- Multi-city weather comparisons
-- Historical weather analysis
-
-#### E-commerce Tool Set
-
-Complete shopping and order management system:
-
-Available tools:
-- `search_products`: Search with filters (price, category, brand)
-- `add_to_cart`: Add items with quantity management
-- `get_cart`: View current cart contents
-- `update_cart_item`: Modify quantities in cart
-- `remove_from_cart`: Remove items from cart
-- `clear_cart`: Empty the cart
-- `checkout`: Complete purchase with shipping details
-- `get_order`: Get specific order details
-- `list_orders`: View order history
-- `track_order`: Check shipping status
-- `return_item`: Process returns with reasons
-
-Example test scenarios (22 total):
-- Basic: Product search, cart operations, order tracking
-- Complex: Multi-step purchases with budgets, comparative shopping, conditional returns, inventory-aware cart optimization, gift shopping scenarios
-
-#### Events Tool Set
-
-Event planning and management:
-
-Available tools:
-- `find_events`: Search by type, location, and date range
-- `create_event`: Create with title, date, location, and description
-- `cancel_event`: Cancel with reason
-
-Example test scenarios:
-- Finding events by location and type
-- Creating events with specific details
-- Multi-step event planning workflows
-
-### Output Modes
-
-#### Standard Output
-By default, shows only the final answer:
-```bash
-./run_demo.sh --query agriculture "What's the weather in NYC?"
-# Output: Current conditions and forecast summary
-```
-
-#### Verbose Mode
-Use `--verbose` or `-v` to see agent reasoning and tool execution:
-```bash
-./run_demo.sh --verbose --query ecommerce "Find laptops"
-# Shows: Agent thoughts, tool selections, execution times, and results
-```
-
-#### Debug Mode  
-Use `--debug` or `-d` for full DSPy prompts and LLM responses:
-```bash
-./run_demo.sh --debug agriculture
-# Shows: Complete prompts, LLM responses, and internal processing
-```
-
-### Performance Metrics
-
-Test results include:
-- Execution time per iteration
-- Total iterations used
-- Tools invoked
-- Success/failure status
-- Tool matching validation (for test cases)
-
-### Using Different LLM Providers
-
-Configure your LLM provider in the `.env` file:
-
-#### Ollama (Local - Default)
-```bash
-DSPY_PROVIDER=ollama
-OLLAMA_MODEL=gemma3:27b
-```
-
-#### Claude (Anthropic)
-```bash
-DSPY_PROVIDER=claude
-ANTHROPIC_API_KEY=your-api-key-here
-```
-
-#### OpenAI
-```bash
-DSPY_PROVIDER=openai
-OPENAI_API_KEY=your-api-key-here
-```
-
-## Python API Usage
-
-You can also use the modules directly in Python:
-
-```python
-from agentic_loop.run_query import run_query
-
-# Run a custom query
-run_query(
-    query="What's the weather in Paris?",
-    tool_set_name="agriculture",
-    max_iterations=10
-)
-```
-
-```python
-from agentic_loop.demo_react_agent import run_test_cases
-
-# Run test cases programmatically
-run_test_cases(tool_set_name="ecommerce", test_case_index=3)
-```
-
-## Troubleshooting
-
-- **Ollama not running**: Start with `ollama serve`
-- **Model not found**: Pull with `ollama pull gemma3:27b`
-- **Import errors**: Ensure you're using `poetry run` or `./run_demo.sh`
-- **API key errors**: Check your `.env` file has the correct API keys
-- **Timeout errors**: Increase `AGENT_TIMEOUT_SECONDS` in `.env`
-- **Tool not found**: Verify tool set name is correct (agriculture, ecommerce, events)
+Test mode validates agent behavior:
+- **Expected Tools**: Verify the agent uses the correct tools
+- **Performance Tracking**: Monitor execution times across test cases
+- **Success Metrics**: Track pass/fail rates for test suites
 
 ## Environment Variables
 
-See `.env.sample` for all available configuration options. Key variables:
+Key configuration options in `.env`:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -352,13 +220,58 @@ See `.env.sample` for all available configuration options. Key variables:
 | `LLM_TEMPERATURE` | Generation temperature | `0.7` |
 | `LLM_MAX_TOKENS` | Maximum tokens | `1024` |
 | `DSPY_DEBUG` | Show DSPy prompts/responses | `false` |
-| `AGENT_MAX_ITERATIONS` | Maximum agent loop iterations | `5` |
-| `AGENT_TIMEOUT_SECONDS` | Maximum execution time | `60.0` |
+| `DEMO_VERBOSE` | Show detailed execution logs | `false` |
+
+## Project Structure
+
+```
+.
+├── agentic_loop/
+│   ├── session.py           # AgentSession - THE way to interact with agents
+│   ├── core_loop.py         # Core React loop implementation
+│   ├── react_agent.py       # React agent with tool selection
+│   ├── extract_agent.py     # Extract agent for answer synthesis
+│   └── demos/
+│       └── demo_runner.py   # Unified demo runner for all modes
+├── shared/
+│   ├── conversation_history.py  # Conversation history management
+│   ├── trajectory_models.py     # Type-safe trajectory tracking
+│   └── tool_utils/              # Tool registry and base classes
+├── tools/
+│   ├── ecommerce/           # E-commerce tool implementations
+│   ├── precision_agriculture/  # Weather and agriculture tools
+│   └── events/              # Event management tools
+└── run_demo.sh              # Main demo runner script
+```
+
+## Development
+
+### Adding New Tools
+
+1. Create a tool class inheriting from `BaseTool`
+2. Add to appropriate tool set in `tools/*/tool_set.py`
+3. Include test cases with expected tools
+4. Test with: `./run_demo.sh your_tool_set`
+
+### Creating Custom Tool Sets
+
+1. Subclass `ToolSet` in your tool directory
+2. Define tool classes and test cases
+3. Register in `demo_runner.py` TOOL_SETS
+4. Test with the demo runner
+
+## Troubleshooting
+
+- **Ollama not running**: Start with `ollama serve`
+- **Model not found**: Pull with `ollama pull gemma3:27b`
+- **Import errors**: Ensure you're using `poetry run` or activating the virtual environment
+- **API key errors**: Check your `.env` file has the correct API keys
+- **Tool not found**: Verify tool set name is correct (agriculture, ecommerce, events)
 
 ## Next Steps
 
-- Explore different tool sets and their capabilities
-- Create custom tools for your use case
-- Experiment with different LLM providers
-- Integrate with durable execution frameworks
-- Build complex multi-step workflows
+- Explore the 22 ecommerce test cases including complex scenarios
+- Try verbose mode to understand agent reasoning: `./run_demo.sh --verbose ecommerce 13`
+- Build multi-turn conversations with the conversation demo
+- Create custom tool sets for your use case
+- Integrate with durable execution frameworks like Temporal

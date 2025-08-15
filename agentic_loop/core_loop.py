@@ -44,67 +44,78 @@ logger = logging.getLogger(__name__)
 def run_react_loop(
     react_agent: ReactAgent,
     tool_registry: ToolRegistry,
+    trajectory: Trajectory,
     user_query: str,
-    tool_set_name: str,
-    max_iterations: int = None
+    context_prompt: str,
+    max_iterations: int = 5,
+    session_user_id: str = "demo_user",
+    verbose: bool = False
 ) -> Trajectory:
     """
-    Run the React agent loop with type-safe trajectory.
+    Run the React agent loop with conversation context.
     
-    This is the core loop that implements the React pattern:
-    - Thought: Agent reasons about the current state
+    This is the React loop implementation. All agent interactions
+    go through this function via AgentSession.
+    
+    The loop implements the React pattern:
+    - Thought: Agent reasons about the current state and context
     - Action: Agent selects a tool and arguments
     - Observation: Tool is executed and result is observed
-    
-    The loop continues until:
-    - The agent selects the "finish" action
-    - Maximum iterations are reached
-    - An unrecoverable error occurs
     
     Args:
         react_agent: The initialized ReactAgent instance
         tool_registry: The tool registry for executing tools
+        trajectory: Pre-initialized trajectory with metadata
         user_query: The user's question or task
-        tool_set_name: Name of the tool set being used (for history saving)
-        max_iterations: Maximum number of iterations (default: 5)
+        context_prompt: Conversation context (may be empty for first query)
+        max_iterations: Maximum number of iterations
+        verbose: Whether to show detailed execution logs
         
     Returns:
         Complete Trajectory object with all steps and observations
     """
-    # Use config default if not specified
-    if max_iterations is None:
-        max_iterations = config.max_iterations
-    
-    # Initialize trajectory
-    trajectory = Trajectory(
-        user_query=user_query,
-        tool_set_name=tool_set_name,
-        max_iterations=max_iterations
-    )
+    # Clean demo logging
+    if verbose:
+        print(f"{'='*80}")
+        print("Starting React loop")
+        print(f"{'='*80}")
     
     logger.debug("Starting ReactAgent loop")
     logger.debug(f"Query: {user_query}")
+    logger.debug(f"Context size: {len(context_prompt)} chars")
     
     # Main agent loop
     while trajectory.iteration_count < max_iterations:
         iteration_start = time.time()
         iteration_num = trajectory.iteration_count + 1
-        logger.info(f"🔄 Loop iteration {iteration_num}/{max_iterations}: Reasoning about next action...")
         
-        # Get next action from agent (trajectory is updated in-place)
+        # Get next action from agent with context
+        # Always pass context - agents created via AgentSession always support it
         trajectory = react_agent(
             trajectory=trajectory,
-            user_query=user_query
+            user_query=user_query,
+            conversation_context=context_prompt
         )
-        
-        # History saving removed - use dspy.inspect_history() for debugging
-        
+
         # Get the last step that was just added
         last_step = trajectory.steps[-1]
         
+        # No injection needed - will be handled during execution
+        
+        # Demo logging for React iteration
+        if verbose:
+            print(f"react loop call {iteration_num} - log of results:")
+            if last_step.thought:
+                print(f"  Thought: {last_step.thought.content}")
+            if last_step.tool_invocation:
+                print(f"  Tool: {last_step.tool_invocation.tool_name}")
+                print(f"  Args: {last_step.tool_invocation.tool_args}")
+            elif last_step.is_finish:
+                print(f"  Action: Final Answer")
+            print()
+        
         # Check if agent has decided to finish
         if last_step.is_finish:
-            logger.info(f"   ✅ Agent selected 'finish' - task complete after {iteration_num} iteration(s)")
             trajectory.completed_at = datetime.now()
             break
         
@@ -119,16 +130,24 @@ def run_react_loop(
         tool_name = tool_invocation.tool_name
         tool_args = tool_invocation.tool_args
         
-        # Log tool selection with minimal info
-        logger.info(f"   🛠️  Executing tool: {tool_name}")
         logger.debug(f"Tool args: {tool_args}")
         
         # Execute tool and add observation
         if tool_name in tool_registry.get_all_tools():
             try:
                 tool = tool_registry.get_tool(tool_name)
-                result = tool.execute(**tool_args)
+                
+                # Check if tool has execute_with_user_id method
+                if hasattr(tool, 'execute_with_user_id'):
+                    result = tool.execute_with_user_id(session_user_id, **tool_args)
+                else:
+                    result = tool.execute(**tool_args)
                 logger.debug(f"Tool result: {result}")
+                
+                # Demo logging for tool result
+                if verbose:
+                    result_str = str(result)[:100] + "..." if len(str(result)) > 100 else str(result)
+                    print(f"  Result: {result_str}")
                 
                 execution_time = (time.time() - iteration_start) * 1000
                 trajectory.add_observation(
@@ -164,13 +183,25 @@ def run_react_loop(
     if not trajectory.completed_at:
         trajectory.completed_at = datetime.now()
     
+    # Demo logging summary
+    if verbose:
+        print(f"summary:")
+        print(f"✓ React loop completed")
+        print(f"  Total iterations: {trajectory.iteration_count}")
+        if trajectory.tools_used:
+            print(f"  Tools used: {', '.join(trajectory.tools_used)}")
+        else:
+            print("  Tools used: None (used context)")
+        print()
+    
     return trajectory
 
 
 def extract_final_answer(
     trajectory: Trajectory,
     user_query: str,
-    tool_set_name: str
+    tool_set_name: str,
+    verbose: bool = False
 ) -> ExtractResult:
     """
     Extract the final answer from the trajectory using the Extract Agent.
@@ -197,6 +228,12 @@ def extract_final_answer(
         user_query: str = dspy.InputField(desc="The user's original question")
         answer: str = dspy.OutputField(desc="Clear, direct answer to the user's question")
     
+    # Demo logging Extract Agent section
+    if verbose:
+        print(f"{'='*80}")
+        print("Extract Agent")
+        print(f"{'='*80}")
+    
     # Initialize Extract Agent with Chain of Thought reasoning
     extract_agent = ReactExtract(signature=AnswerExtractionSignature)
     
@@ -207,6 +244,12 @@ def extract_final_answer(
         user_query=user_query
     )
     
+    # Demo logging Extract Agent results
+    if verbose:
+        print("log of call results:")
+        print("✓ Answer extracted and synthesized")
+        print()
+    
     # History saving removed - use dspy.inspect_history() for debugging
     
     logger.debug("Successfully extracted final answer")
@@ -216,110 +259,3 @@ def extract_final_answer(
         answer=result.answer,
         reasoning=getattr(result, 'reasoning', '')
     )
-
-
-def run_agent_loop(
-    user_query: str,
-    tool_registry: ToolRegistry,
-    tool_set_name: str,
-    signature: Optional[dspy.Signature] = None,
-    max_iterations: int = None
-) -> Dict[str, Any]:
-    """
-    Run the complete agent loop: React → Extract → Observe.
-    
-    This is the main entry point for running the agentic loop. It orchestrates:
-    1. Initializing the React agent with the appropriate signature
-    2. Running the React loop to gather information
-    3. Extracting the final answer from the trajectory
-    4. Returning comprehensive results
-    
-    Args:
-        user_query: The user's question or task to complete
-        tool_registry: Registry containing available tools
-        tool_set_name: Name of the active tool set
-        signature: Optional custom signature for the React agent.
-                  If not provided, uses tool set signature or default.
-        max_iterations: Maximum iterations for the React loop (default: 5)
-        
-    Returns:
-        Dictionary containing:
-        - status: 'success' or 'error'
-        - trajectory: Complete Trajectory object
-        - tools_used: List of tools that were actually used
-        - execution_time: Total execution time in seconds
-        - answer: The final answer (if successful)
-        - reasoning: The reasoning process (if available)
-        - total_iterations: Number of iterations performed
-        - error: Error message (if status is 'error')
-    """
-    try:
-        # Use config default if not specified
-        if max_iterations is None:
-            max_iterations = config.max_iterations
-        
-        # Determine which signature to use
-        if signature is None:
-            # Try to get tool set specific signature
-            tool_set_signature = tool_registry.get_react_signature()
-            
-            if tool_set_signature:
-                # Format the signature's docstring with current date if needed
-                current_date = datetime.now().strftime("%Y-%m-%d")
-                if hasattr(tool_set_signature, '__doc__') and tool_set_signature.__doc__:
-                    tool_set_signature.__doc__ = tool_set_signature.__doc__.format(current_date=current_date)
-                signature = tool_set_signature
-            else:
-                # Fallback to generic signature
-                class DefaultReactSignature(dspy.Signature):
-                    """Use tools to answer the user's question."""
-                    user_query: str = dspy.InputField(desc="The user's question")
-                signature = DefaultReactSignature
-        
-        # Initialize ReactAgent
-        react_agent = ReactAgent(
-            signature=signature,
-            tool_registry=tool_registry
-        )
-        
-        # Run React loop - returns complete trajectory
-        trajectory = run_react_loop(
-            react_agent=react_agent,
-            tool_registry=tool_registry,
-            user_query=user_query,
-            tool_set_name=tool_set_name,
-            max_iterations=max_iterations
-        )
-        
-        # Extract final answer using Extract Agent
-        extract_result = extract_final_answer(
-            trajectory=trajectory,
-            user_query=user_query,
-            tool_set_name=tool_set_name
-        )
-        
-        # Calculate execution time
-        if trajectory.completed_at and trajectory.started_at:
-            execution_time = (trajectory.completed_at - trajectory.started_at).total_seconds()
-        else:
-            execution_time = 0
-        
-        return {
-            'status': 'success',
-            'trajectory': trajectory,  # Clean Trajectory object
-            'tools_used': trajectory.tools_used,
-            'execution_time': execution_time,
-            'answer': extract_result.answer,
-            'reasoning': extract_result.reasoning,
-            'total_iterations': trajectory.iteration_count
-        }
-        
-    except Exception as e:
-        logger.error(f"Agent loop failed: {e}", exc_info=True)
-        return {
-            'status': 'error',
-            'error': str(e),
-            'execution_time': 0,
-            'tools_used': [],
-            'trajectory': None  # Changed from {} to None for clean break
-        }

@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 """
-Run custom queries through the agentic loop.
+Primary query runner for the agentic loop.
 
-Supports both command line arguments and stdin input.
+This is THE way to execute queries through the custom agentic loop.
+Uses AgentSession directly and returns type-safe SessionResult.
+
+Can be:
+- Imported and used programmatically
+- Called from command line
+- Used by demo_runner to showcase capabilities
 """
 
 import sys
@@ -10,85 +16,65 @@ import os
 import logging
 import argparse
 from pathlib import Path
+from typing import Optional
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from shared import ConsoleFormatter, setup_llm
-from agentic_loop.core_loop import run_agent_loop
-from shared.tool_utils.registry import ToolRegistry
-from tools.ecommerce.tool_set import EcommerceToolSet
-from tools.precision_agriculture.tool_set import AgricultureToolSet
-from tools.events.tool_set import EventsToolSet
-
-# Available tool sets
-TOOL_SETS = {
-    EcommerceToolSet.NAME: EcommerceToolSet,
-    AgricultureToolSet.NAME: AgricultureToolSet,
-    EventsToolSet.NAME: EventsToolSet,
-}
+from agentic_loop.session import AgentSession, SessionResult
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
 
-def run_query(query: str, tool_set_name: str, max_iterations: int = 10) -> None:
-    """Run a custom query through the agent loop."""
-    verbose = os.getenv("DEMO_VERBOSE", "false").lower() == "true"
+def run_query(
+    query: str,
+    tool_set_name: str = "agriculture",
+    max_iterations: int = 10,
+    verbose: Optional[bool] = None,
+    session: Optional[AgentSession] = None
+) -> SessionResult:
+    """
+    Execute a query through the agentic loop using AgentSession.
     
-    if verbose:
-        console = ConsoleFormatter()
-        logger.info(console.section_header('🚀 Running Custom Query'))
-        logger.info(f"Tool Set: {tool_set_name}")
-        logger.info(f"Query: {query}\n")
+    This is THE primary way to run queries. Clean, simple, type-safe.
     
-    # Setup LLM
+    Args:
+        query: The user's question or task
+        tool_set_name: Which tool set to use (agriculture, ecommerce, events)
+        max_iterations: Maximum React loop iterations
+        verbose: Whether to show detailed logs (defaults to DEMO_VERBOSE env var)
+        session: Optional existing session for multi-turn conversations
+    
+    Returns:
+        SessionResult with trajectory, answer, and metadata
+    """
+    # Determine verbosity
+    if verbose is None:
+        verbose = os.getenv("DEMO_VERBOSE", "false").lower() == "true"
+    
+    # Setup LLM (idempotent - safe to call multiple times)
     setup_llm()
     
-    # Create tool registry
-    tool_set = TOOL_SETS[tool_set_name]()
-    registry = ToolRegistry()
-    registry.register_tool_set(tool_set)
-    
-    # Run the agent loop
-    try:
-        result = run_agent_loop(
-            user_query=query,
-            tool_registry=registry,
+    # Create or use provided session
+    if session is None:
+        session = AgentSession(
             tool_set_name=tool_set_name,
-            max_iterations=max_iterations
+            verbose=verbose
         )
-        
-        if result['status'] == 'success':
-            if verbose:
-                trajectory = result['trajectory']
-                console = ConsoleFormatter()
-                logger.info(console.section_header('📊 Summary', char='-', width=60))
-                logger.info(f"✓ Completed in {result['execution_time']:.2f}s")
-                logger.info(f"  Iterations: {trajectory.iteration_count}")
-                logger.info(f"  Tools used: {', '.join(trajectory.tools_used) if trajectory.tools_used else 'None'}")
-                logger.info("")
-            
-            # Print the final answer
-            print(result['answer'])
-        else:
-            error_msg = result.get('error', 'Unknown error') if result else 'No result returned'
-            logger.error(f"Error: {error_msg}")
-            sys.exit(1)
-            
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        if verbose:
-            import traceback
-            traceback.print_exc()
-        sys.exit(1)
+    
+    # Execute query through session (THE way to interact with agents)
+    result = session.query(query, max_iterations=max_iterations)
+    
+    return result
 
 
 def main():
-    """Main entry point."""
+    """Command-line interface for run_query."""
     parser = argparse.ArgumentParser(
-        description="Run custom queries through the agentic loop",
+        description="Run queries through the agentic loop",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -102,7 +88,7 @@ Tool sets: agriculture, ecommerce, events
     
     parser.add_argument(
         'tool_set',
-        choices=list(TOOL_SETS.keys()),
+        choices=['agriculture', 'ecommerce', 'events'],
         help='Tool set to use'
     )
     
@@ -119,6 +105,12 @@ Tool sets: agriculture, ecommerce, events
         help='Max iterations (default: 10)'
     )
     
+    parser.add_argument(
+        '--verbose', '-v',
+        action='store_true',
+        help='Show detailed execution logs'
+    )
+    
     args = parser.parse_args()
     
     # Get query from args or stdin
@@ -133,11 +125,45 @@ Tool sets: agriculture, ecommerce, events
         logger.error("Provide a query as an argument or via stdin")
         sys.exit(1)
     
+    # Determine verbosity
+    verbose = args.verbose or os.getenv("DEMO_VERBOSE", "false").lower() == "true"
+    
+    # Display header if verbose
+    if verbose:
+        console = ConsoleFormatter()
+        logger.info(console.section_header('🚀 Running Query'))
+        logger.info(f"Tool Set: {args.tool_set}")
+        logger.info(f"Query: {query}\n")
+    
     # Run the query
     try:
-        run_query(query, args.tool_set, args.max_iterations)
+        result = run_query(
+            query=query,
+            tool_set_name=args.tool_set,
+            max_iterations=args.max_iterations,
+            verbose=verbose
+        )
+        
+        # Display results based on verbosity
+        if verbose:
+            console = ConsoleFormatter()
+            logger.info(console.section_header('📊 Summary', char='-', width=60))
+            logger.info(f"✓ Completed in {result.execution_time:.2f}s")
+            logger.info(f"  Iterations: {result.iterations}")
+            logger.info(f"  Tools used: {', '.join(result.tools_used) if result.tools_used else 'None'}")
+            logger.info("")
+        
+        # Always print the final answer
+        print(result.answer)
+        
     except KeyboardInterrupt:
         logger.info("\n\nQuery interrupted by user.")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        if verbose:
+            import traceback
+            traceback.print_exc()
         sys.exit(1)
 
 

@@ -109,7 +109,7 @@ class ConversationHistory:
             remove_end = len(self.trajectories) - preserve_last
             to_remove = self.trajectories[remove_start:remove_end]
             
-            logger.info(f"Removing {len(to_remove)} trajectories from position {remove_start} to {remove_end}")
+            logger.debug(f"Removing {len(to_remove)} trajectories from position {remove_start} to {remove_end}")
             
             # Create summary if configured
             if self.config.summarize_removed and to_remove:

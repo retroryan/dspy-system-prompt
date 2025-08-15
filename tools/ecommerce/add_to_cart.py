@@ -16,7 +16,6 @@ class AddToCartTool(BaseTool):
     
     class Arguments(BaseModel):
         """Arguments for adding to cart."""
-        user_id: str = Field(..., description="User ID")
         product_id: str = Field(..., description="Product ID to add to cart")
         quantity: int = Field(default=1, ge=1, description="Quantity to add")
     
@@ -25,7 +24,7 @@ class AddToCartTool(BaseTool):
     args_model: Type[BaseModel] = Arguments
     
     @safe_tool_execution
-    def execute(self, user_id: str, product_id: str, quantity: int = 1) -> dict:
+    def execute_with_user_id(self, user_id: str, product_id: str, quantity: int = 1) -> dict:
         """Execute the tool to add product to cart."""
         # Use CartInventoryManager for real operations
         manager = CartInventoryManager()

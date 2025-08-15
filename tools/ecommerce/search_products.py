@@ -16,7 +16,6 @@ class SearchProductsTool(BaseTool):
     
     class Arguments(BaseModel):
         """Arguments for searching products."""
-        user_id: str = Field(..., description="User ID")
         query: str = Field(..., description="Search query")
         category: Optional[str] = Field(default=None, description="Product category")
         max_price: Optional[float] = Field(default=None, ge=0, description="Maximum price")
@@ -36,8 +35,12 @@ class SearchProductsTool(BaseTool):
     description: str = "Search for products in the catalog"
     args_model: Type[BaseModel] = Arguments
     
+    def execute_with_user_id(self, user_id: str, **kwargs) -> str:
+        """Not needed - this tool doesn't require user context."""
+        return self.execute(**kwargs)
+    
     @safe_tool_execution
-    def execute(self, user_id: str, query: str, category: str = None, max_price: Union[float, str, None] = None) -> dict:
+    def execute(self, query: str, category: str = None, max_price: Union[float, str, None] = None) -> dict:
         """Execute the tool to search products."""
         # Load products from JSON file
         file_path = Path(__file__).resolve().parent.parent / "data" / "products.json"
