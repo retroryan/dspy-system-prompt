@@ -10,6 +10,10 @@ This demo tells a realistic shopping story that naturally demonstrates:
 - Complex multi-step e-commerce workflows
 """
 
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 import logging
 from agentic_loop.session import AgentSession
 from shared import setup_llm

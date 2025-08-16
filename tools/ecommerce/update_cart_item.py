@@ -1,10 +1,13 @@
 """Update cart item tool implementation using the unified base class."""
-from typing import List, ClassVar, Type
+from typing import List, ClassVar, Type, Optional, TYPE_CHECKING
 from pydantic import BaseModel, Field
 
 from shared.tool_utils.base_tool import BaseTool, ToolTestCase
 from .cart_inventory_manager import CartInventoryManager
 from .models import UpdateCartItemOutput
+
+if TYPE_CHECKING:
+    from agentic_loop.session import AgentSession
 
 
 class UpdateCartItemTool(BaseTool):
@@ -12,6 +15,7 @@ class UpdateCartItemTool(BaseTool):
     
     NAME: ClassVar[str] = "update_cart_item"
     MODULE: ClassVar[str] = "tools.ecommerce.update_cart_item"
+    _accepts_session: ClassVar[bool] = True  # This tool needs user context
     
     class Arguments(BaseModel):
         """Arguments for updating cart item."""
@@ -22,13 +26,24 @@ class UpdateCartItemTool(BaseTool):
     description: str = "Update the quantity of an item in the shopping cart"
     args_model: Type[BaseModel] = Arguments
     
-    def execute_with_user_id(self, user_id: str, product_id: str, new_quantity: int) -> dict:
+    def execute(self, **kwargs) -> dict:
         """Execute the tool to update cart item."""
+        # Extract session from kwargs
+        session: Optional['AgentSession'] = kwargs.pop('session', None)
+        
+        # Check for required session and user_id
+        if not session or not session.user_id:
+            return {"error": "User session required to update cart"}
+        
+        # Get product_id and new_quantity from kwargs
+        product_id = kwargs.get('product_id')
+        new_quantity = kwargs.get('new_quantity')
+        
         # Use CartInventoryManager for operations
         manager = CartInventoryManager()
         
         # Update cart item using the manager
-        result: UpdateCartItemOutput = manager.update_cart_item(user_id, product_id, new_quantity)
+        result: UpdateCartItemOutput = manager.update_cart_item(session.user_id, product_id, new_quantity)
         
         # Convert Pydantic model to dict for response
         return result.model_dump(exclude_none=True)

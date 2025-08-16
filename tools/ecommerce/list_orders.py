@@ -1,9 +1,12 @@
 """List orders tool implementation using the unified base class."""
-from typing import List, ClassVar, Type, Optional
+from typing import List, ClassVar, Type, Optional, TYPE_CHECKING
 from pydantic import BaseModel, Field
 
 from shared.tool_utils.base_tool import BaseTool, ToolTestCase
 from .cart_inventory_manager import CartInventoryManager
+
+if TYPE_CHECKING:
+    from agentic_loop.session import AgentSession
 
 
 class ListOrdersTool(BaseTool):
@@ -11,6 +14,7 @@ class ListOrdersTool(BaseTool):
     
     NAME: ClassVar[str] = "list_orders"
     MODULE: ClassVar[str] = "tools.ecommerce.list_orders"
+    _accepts_session: ClassVar[bool] = True  # This tool needs user context
     
     class Arguments(BaseModel):
         """Argument validation model."""
@@ -23,13 +27,23 @@ class ListOrdersTool(BaseTool):
     description: str = "List all orders for a user"
     args_model: Type[BaseModel] = Arguments
     
-    def execute_with_user_id(self, user_id: str, status: Optional[str] = None) -> dict:
+    def execute(self, **kwargs) -> dict:
         """Execute the tool to list user orders."""
+        # Extract session from kwargs
+        session: Optional['AgentSession'] = kwargs.pop('session', None)
+        
+        # Check for required session and user_id
+        if not session or not session.user_id:
+            return {"error": "User session required to list orders"}
+        
+        # Get status filter if provided
+        status = kwargs.get('status', None)
+        
         # Use CartInventoryManager for operations
         manager = CartInventoryManager()
         
         # List orders using the manager
-        orders = manager.list_orders(user_id, status)
+        orders = manager.list_orders(session.user_id, status)
         
         return {"orders": orders, "count": len(orders)}
     

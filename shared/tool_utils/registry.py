@@ -1,10 +1,14 @@
 """Central registry for all tools adapted for agentic loop integration."""
 import time
-from typing import Dict, Type, Callable, List, Optional, Any
+from typing import Dict, Type, Callable, List, Optional, Any, TYPE_CHECKING
 import dspy
 from ..models import ToolExecutionResult, ToolCall
 from .base_tool import BaseTool
 from .base_tool_sets import ToolSet, ToolSetTestCase
+
+# Avoid circular imports
+if TYPE_CHECKING:
+    from agentic_loop.session import AgentSession
 
 
 class ToolRegistry:
@@ -100,6 +104,37 @@ class ToolRegistry:
                 execution_time=time.time() - start_time,
                 parameters=tool_call.arguments
             )
+    
+    def execute_tool_with_session(
+        self,
+        tool_name: str,
+        session: Optional['AgentSession'] = None,
+        **kwargs
+    ) -> Any:
+        """
+        Execute a tool with session context injection.
+        
+        This method handles session injection for tools that need user context,
+        following the strands pattern of passing context through invocation_state.
+        
+        Args:
+            tool_name: Name of the tool to execute
+            session: The agent session containing user context
+            **kwargs: Tool arguments
+            
+        Returns:
+            The result of the tool execution
+        """
+        tool = self.get_tool(tool_name)
+        if not tool:
+            return {"error": f"Unknown tool: {tool_name}"}
+        
+        # Add session to kwargs if tool accepts it
+        if hasattr(tool, '_accepts_session') and tool._accepts_session and session:
+            kwargs['session'] = session
+        
+        # Use validate_and_execute which handles session properly
+        return tool.validate_and_execute(**kwargs)
     
     def register_tool_set(self, tool_set: ToolSet) -> None:
         """

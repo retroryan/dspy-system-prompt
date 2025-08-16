@@ -35,9 +35,6 @@ class SearchProductsTool(BaseTool):
     description: str = "Search for products in the catalog"
     args_model: Type[BaseModel] = Arguments
     
-    def execute_with_user_id(self, user_id: str, **kwargs) -> str:
-        """Not needed - this tool doesn't require user context."""
-        return self.execute(**kwargs)
     
     @safe_tool_execution
     def execute(self, query: str, category: str = None, max_price: Union[float, str, None] = None) -> dict:

@@ -22,12 +22,16 @@ This separation of concerns allows for:
 import logging
 import time
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, TYPE_CHECKING
 from datetime import datetime
 
 import dspy
 
 from agentic_loop.react_agent import ReactAgent
+
+# Avoid circular imports
+if TYPE_CHECKING:
+    from agentic_loop.session import AgentSession
 from agentic_loop.extract_agent import ReactExtract
 from shared.config import config
 from shared.tool_utils.registry import ToolRegistry
@@ -48,7 +52,7 @@ def run_react_loop(
     user_query: str,
     context_prompt: str,
     max_iterations: int = 5,
-    session_user_id: str = "demo_user",
+    session: Optional['AgentSession'] = None,
     verbose: bool = False
 ) -> Trajectory:
     """
@@ -135,13 +139,12 @@ def run_react_loop(
         # Execute tool and add observation
         if tool_name in tool_registry.get_all_tools():
             try:
-                tool = tool_registry.get_tool(tool_name)
-                
-                # Check if tool has execute_with_user_id method
-                if hasattr(tool, 'execute_with_user_id'):
-                    result = tool.execute_with_user_id(session_user_id, **tool_args)
-                else:
-                    result = tool.execute(**tool_args)
+                # Use centralized tool execution with session
+                result = tool_registry.execute_tool_with_session(
+                    tool_name=tool_name,
+                    session=session,
+                    **tool_args
+                )
                 logger.debug(f"Tool result: {result}")
                 
                 # Demo logging for tool result

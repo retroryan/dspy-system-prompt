@@ -14,6 +14,7 @@ Primary Goals:
 
 import os
 import logging
+import uuid
 from typing import Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict
@@ -104,7 +105,16 @@ class AgentSession:
         """
         self.tool_set_name = tool_set_name
         self.user_id = user_id
+        self.session_id = str(uuid.uuid4())  # Unique session identifier
         self.verbose = verbose
+        
+        # Session metadata (similar to strands' agent.state)
+        self.session_metadata = {
+            "user_id": user_id,
+            "session_id": self.session_id,
+            "created_at": datetime.now(),
+            "tool_set": tool_set_name
+        }
         
         # Always-on conversation history
         self.history = ConversationHistory(config or self._default_config())
@@ -114,7 +124,7 @@ class AgentSession:
         self.react_agent = self._setup_react_agent()
         self.extract_agent = self._setup_extract_agent()
         
-        logger.debug(f"Initialized AgentSession with {tool_set_name} tools")
+        logger.debug(f"Initialized AgentSession with {tool_set_name} tools for user {user_id}")
     
     def query(self, text: str, max_iterations: int = 5) -> SessionResult:
         """
@@ -199,11 +209,13 @@ class AgentSession:
         """
         Run the React agent loop with context.
         
-        This calls the core React loop implementation with conversation context.
+        This calls the core React loop implementation with conversation context,
+        passing the session object instead of just user_id.
         """
         from agentic_loop.core_loop import run_react_loop
         
         # Run the single, core React loop implementation
+        # Pass self (the session) instead of user_id
         trajectory = run_react_loop(
             react_agent=self.react_agent,
             tool_registry=self.tool_registry,
@@ -211,7 +223,7 @@ class AgentSession:
             user_query=user_query,
             context_prompt=context_prompt,
             max_iterations=max_iterations,
-            session_user_id=self.user_id,
+            session=self,  # Pass the entire session object
             verbose=self.verbose
         )
         

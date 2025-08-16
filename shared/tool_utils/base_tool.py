@@ -5,9 +5,13 @@ This module defines the foundational classes for creating tools that can be
 registered and used within the DSPy framework for multi-tool selection.
 It leverages Pydantic for robust argument validation and clear data modeling.
 """
-from typing import List, ClassVar, Type, Any, Dict, Optional
+from typing import List, ClassVar, Type, Any, Dict, Optional, TYPE_CHECKING
 from pydantic import BaseModel, Field
 from abc import ABC, abstractmethod
+
+# Avoid circular imports
+if TYPE_CHECKING:
+    from agentic_loop.session import AgentSession
 
 
 class ToolArgument(BaseModel):
@@ -36,6 +40,9 @@ class BaseTool(BaseModel, ABC):
     # Class-level constants (not Pydantic fields) that must be defined by each concrete tool
     NAME: ClassVar[str]  # The unique name of the tool (e.g., "search_products")
     MODULE: ClassVar[str]  # The module/category the tool belongs to (e.g., "ecommerce", "productivity")
+    
+    # Session awareness flag - tools that need user context should set this to True
+    _accepts_session: ClassVar[bool] = False
     
     # Instance fields that define the tool's characteristics
     description: str = Field(..., min_length=1)  # A brief explanation of what the tool does
@@ -123,45 +130,49 @@ class BaseTool(BaseModel, ABC):
             for arg in self.arguments
         ]
     
-    def execute(self, **kwargs) -> str:
+    @abstractmethod
+    def execute(self, **kwargs) -> Any:
         """
-        Method for tools that don't require user context.
-        Override this OR execute_with_user_id, not both.
+        Execute the tool's logic with the provided arguments.
+        
+        Tools that need user context should:
+        1. Set _accepts_session = True as a class variable
+        2. Access session from kwargs: session = kwargs.pop('session', None)
+        3. Return error if session is required but missing
 
         Args:
             **kwargs: The arguments required for the tool's execution.
+                     May include 'session' for session-aware tools.
 
         Returns:
-            A formatted string containing the result of the tool's operation.
+            The result of the tool's operation (dict, str, or any JSON-serializable type).
         """
-        raise NotImplementedError("Tool must implement either execute() or execute_with_user_id()")
-
-    def execute_with_user_id(self, user_id: str, **kwargs) -> str:
-        """
-        Method for tools that require user context.
-        Override this OR execute, not both.
-
-        Args:
-            user_id: The user identifier for personalized operations
-            **kwargs: The arguments required for the tool's execution.
-
-        Returns:
-            A formatted string containing the result of the tool's operation.
-        """
-        raise NotImplementedError("Tool must implement either execute() or execute_with_user_id()")
+        raise NotImplementedError("Tool must implement execute()")
     
-    def validate_and_execute(self, **kwargs) -> str:
+    def validate_and_execute(self, **kwargs) -> Any:
         """
         Validates the input arguments using the tool's 'args_model'
         and then executes the tool's logic.
         
+        Session is passed through without validation if present,
+        as it's not part of the args_model.
+        
         Returns:
-            A formatted string containing the result of the tool's operation.
+            The result of the tool's operation.
         """
+        # Extract session before validation (not part of args_model)
+        session = kwargs.pop('session', None)
+        
         # Validate arguments using the Pydantic model
         validated_args = self.args_model(**kwargs)
-        # Execute the tool with the validated and dumped arguments
-        return self.execute(**validated_args.model_dump())
+        
+        # Add session back if this tool accepts it
+        execution_args = validated_args.model_dump()
+        if self._accepts_session and session is not None:
+            execution_args['session'] = session
+            
+        # Execute the tool with the validated arguments
+        return self.execute(**execution_args)
 
 
 class ToolTestCase(BaseModel):
