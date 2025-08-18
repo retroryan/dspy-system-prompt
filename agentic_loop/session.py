@@ -21,9 +21,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 import dspy
 
-from shared.conversation_history import ConversationHistory
-from shared.conversation_models import ConversationHistoryConfig
-from shared.trajectory_models import Trajectory
+from shared.message_models import ConversationHistory, MessageList
 from shared.tool_utils.registry import ToolRegistry
 from agentic_loop.react_agent import ReactAgent
 from agentic_loop.extract_agent import ReactExtract
@@ -33,16 +31,16 @@ logger = logging.getLogger(__name__)
 
 class SessionResult(BaseModel):
     """
-    Type-safe result from an agent query.
+    Type-safe result from an agent query using MessageList.
     
     This is THE result type for all agent interactions.
     No dict returns, no ambiguity - just clean types.
     """
     model_config = ConfigDict(frozen=True)
     
-    trajectory: Trajectory = Field(
+    messages: MessageList = Field(
         ...,
-        description="Complete trajectory of agent reasoning and tool execution"
+        description="Complete message list of agent reasoning and tool execution"
     )
     answer: str = Field(
         ...,
@@ -64,17 +62,18 @@ class SessionResult(BaseModel):
     @property
     def tools_used(self) -> list[str]:
         """List of tools that were actually used."""
-        return self.trajectory.tools_used
+        return self.messages.tools_used
     
     @property
     def iterations(self) -> int:
         """Number of React iterations."""
-        return self.trajectory.iteration_count
+        return self.messages.iteration_count
 
 
 class AgentSession:
     """
-    THE way to interact with agents. All interactions go through a session.
+    THE way to interact with agents using MessageList.
+    All interactions go through a session.
     
     This class provides:
     - Always-on conversation history
@@ -90,7 +89,7 @@ class AgentSession:
         self,
         tool_set_name: str = "agriculture",
         user_id: str = "demo_user",
-        config: Optional[ConversationHistoryConfig] = None,
+        config: Optional[Dict[str, Any]] = None,
         verbose: bool = False
     ):
         """
@@ -99,7 +98,9 @@ class AgentSession:
         Args:
             tool_set_name: Which tool set to use (agriculture, ecommerce, events)
             user_id: The user this session is for (defaults to demo_user for demos)
-            config: Optional conversation history configuration.
+            config: Optional conversation history configuration dict with:
+                    - max_messages: Maximum messages to keep in memory
+                    - summarize_removed: Whether to summarize removed messages
                     If not provided, uses smart defaults based on environment.
             verbose: Whether to show detailed execution logs
         """
@@ -107,6 +108,7 @@ class AgentSession:
         self.user_id = user_id
         self.session_id = str(uuid.uuid4())  # Unique session identifier
         self.verbose = verbose
+        self.conversation_turn = 0
         
         # Session metadata (similar to strands' agent.state)
         self.session_metadata = {
@@ -117,7 +119,8 @@ class AgentSession:
         }
         
         # Always-on conversation history
-        self.history = ConversationHistory(config or self._default_config())
+        history_config = config if config else self._default_config()
+        self.history = ConversationHistory(config=history_config)
         
         # Setup tools and agents
         self.tool_registry = self._setup_tools()
@@ -128,7 +131,7 @@ class AgentSession:
     
     def query(self, text: str, max_iterations: int = 5) -> SessionResult:
         """
-        Process a query with automatic context management.
+        Process a query with automatic context management using MessageList.
         
         This is THE method for all agent interactions. Simple, clean, unified.
         
@@ -137,30 +140,34 @@ class AgentSession:
             max_iterations: Maximum React loop iterations
             
         Returns:
-            SessionResult with trajectory, answer, and metadata
+            SessionResult with trajectory (MessageList), answer, and metadata
         """
         start_time = datetime.now()
+        self.conversation_turn += 1
         
-        # Get context from history (empty for first query)
+        # Get context from history
         context = self.history.get_context_for_agent()
         context_prompt = self.history.build_context_prompt(context)
         
-        # Create trajectory with metadata
-        trajectory = Trajectory(
+        # Create message list
+        messages = MessageList(
             user_query=text,
             tool_set_name=self.tool_set_name,
             max_iterations=max_iterations,
             metadata={
-                "conversation_turn": self.history.total_trajectories_processed + 1,
-                "has_context": context["trajectory_count"] > 0,
+                "conversation_turn": self.conversation_turn,
+                "has_context": len(context["messages"]) > 0,
                 "context_size": len(context_prompt),
-                "session_id": id(self)  # Unique session identifier
+                "session_id": self.session_id
             }
         )
         
+        # Add initial user message
+        messages.add_user_message(text)
+        
         # Run the React loop with context
-        trajectory = self._run_react_loop(
-            trajectory=trajectory,
+        messages = self._run_react_loop(
+            messages=messages,
             user_query=text,
             context_prompt=context_prompt,
             max_iterations=max_iterations
@@ -168,25 +175,25 @@ class AgentSession:
         
         # Extract final answer with context
         answer = self._extract_answer(
-            trajectory=trajectory,
+            messages=messages,
             user_query=text,
             context_prompt=context_prompt
         )
         
         # Update conversation history
-        trajectory.completed_at = datetime.now()
-        self.history.add_trajectory(trajectory)
+        messages.completed_at = datetime.now()
+        self.history.add_messages(messages)
         
         # Calculate execution time
         execution_time = (datetime.now() - start_time).total_seconds()
         
         # Return type-safe result
         return SessionResult(
-            trajectory=trajectory,
+            messages=messages,
             answer=answer,
             execution_time=execution_time,
-            conversation_turn=self.history.total_trajectories_processed,
-            had_context=context["trajectory_count"] > 0
+            conversation_turn=self.conversation_turn,
+            had_context=len(context["messages"]) > 0
         )
     
     def reset(self) -> None:
@@ -197,17 +204,18 @@ class AgentSession:
         without creating a new session.
         """
         self.history.clear_history()
+        self.conversation_turn = 0
         logger.info("Session reset - conversation history cleared")
     
     def _run_react_loop(
         self,
-        trajectory: Trajectory,
+        messages: MessageList,
         user_query: str,
         context_prompt: str,
         max_iterations: int
-    ) -> Trajectory:
+    ) -> MessageList:
         """
-        Run the React agent loop with context.
+        Run the React agent loop with context using MessageList.
         
         This calls the core React loop implementation with conversation context,
         passing the session object instead of just user_id.
@@ -216,10 +224,10 @@ class AgentSession:
         
         # Run the single, core React loop implementation
         # Pass self (the session) instead of user_id
-        trajectory = run_react_loop(
+        messages = run_react_loop(
             react_agent=self.react_agent,
             tool_registry=self.tool_registry,
-            trajectory=trajectory,
+            messages=messages,
             user_query=user_query,
             context_prompt=context_prompt,
             max_iterations=max_iterations,
@@ -227,29 +235,29 @@ class AgentSession:
             verbose=self.verbose
         )
         
-        return trajectory
+        return messages
     
     def _extract_answer(
         self,
-        trajectory: Trajectory,
+        messages: MessageList,
         user_query: str,
         context_prompt: str
     ) -> str:
         """
-        Extract the final answer from the trajectory with context.
+        Extract the final answer from the message list with context.
         """
         # Check if extract agent signature has conversation_context field
         if 'conversation_context' in self.extract_agent.signature.input_fields:
             # Context-aware extraction
             result = self.extract_agent(
-                trajectory=trajectory,
+                message_list=messages,
                 user_query=user_query,
                 conversation_context=context_prompt
             )
         else:
             # Standard extraction (fallback, shouldn't happen with our setup)
             result = self.extract_agent(
-                trajectory=trajectory,
+                message_list=messages,
                 user_query=user_query
             )
         
@@ -300,52 +308,26 @@ class AgentSession:
             """Extract agent signature with conversation context."""
             user_query = dspy.InputField(desc="The user's current question or task")
             conversation_context = dspy.InputField(
-                desc="Context from previous interactions to help synthesize answer"
+                desc="Context from previous interactions (may be empty for first query)"
             )
-            answer = dspy.OutputField(desc="The final answer to the user's query")
+            answer = dspy.OutputField(desc="Clear, direct answer to the user's question")
         
         return ReactExtract(signature=ContextAwareExtractSignature)
     
-    @staticmethod
-    def _default_config() -> ConversationHistoryConfig:
-        """
-        Smart defaults based on environment.
+    def _default_config(self) -> Dict[str, Any]:
+        """Get default configuration for ConversationHistory."""
+        # Check environment for configuration hints
+        provider = os.getenv("DSPY_PROVIDER", "ollama").lower()
         
-        Interactive sessions get more history, single queries get minimal.
-        """
-        if os.getenv("INTERACTIVE_MODE"):
-            # Interactive mode - keep more history
-            return ConversationHistoryConfig(
-                max_trajectories=10,
-                summarize_removed=True,
-                preserve_first_trajectories=1,
-                preserve_last_trajectories=7
-            )
+        if provider in ["openai", "anthropic", "claude"]:
+            # High-capacity providers
+            return {
+                'max_messages': 100,
+                'summarize_removed': True
+            }
         else:
-            # Single query mode - minimal history
-            return ConversationHistoryConfig(
-                max_trajectories=3,
-                summarize_removed=False,
-                preserve_first_trajectories=1,
-                preserve_last_trajectories=1
-            )
-
-
-def create_session(
-    tool_set: str = "agriculture",
-    interactive: bool = False
-) -> AgentSession:
-    """
-    Convenience function to create a session with appropriate config.
-    
-    Args:
-        tool_set: Which tools to use
-        interactive: Whether this is an interactive session
-        
-    Returns:
-        Configured AgentSession
-    """
-    if interactive:
-        os.environ["INTERACTIVE_MODE"] = "true"
-    
-    return AgentSession(tool_set)
+            # Local/limited providers
+            return {
+                'max_messages': 30,
+                'summarize_removed': True
+            }

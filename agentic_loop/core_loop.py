@@ -7,7 +7,7 @@ It handles the iterative agent loop, tool execution, and final answer extraction
 The agent loop follows these steps:
 1. **React Phase**: The agent reasons about the current state and selects the next action
 2. **Tool Execution**: The selected tool is executed with the provided arguments
-3. **Observation**: Tool results are added to the trajectory for the next iteration
+3. **Observation**: Tool results are added to the message list for the next iteration
 4. **Iteration**: Steps 1-3 repeat until the agent decides to finish or max iterations
 5. **Extract Phase**: A separate agent synthesizes all observations into a final answer
 6. **Observe Phase**: The final answer is returned to the user
@@ -35,8 +35,8 @@ if TYPE_CHECKING:
 from agentic_loop.extract_agent import ReactExtract
 from shared.config import config
 from shared.tool_utils.registry import ToolRegistry
-from shared.trajectory_models import (
-    Trajectory,
+from shared.message_models import (
+    MessageList,
     ToolStatus,
     ExtractResult
 )
@@ -48,15 +48,15 @@ logger = logging.getLogger(__name__)
 def run_react_loop(
     react_agent: ReactAgent,
     tool_registry: ToolRegistry,
-    trajectory: Trajectory,
+    messages: MessageList,
     user_query: str,
     context_prompt: str,
     max_iterations: int = 5,
     session: Optional['AgentSession'] = None,
     verbose: bool = False
-) -> Trajectory:
+) -> MessageList:
     """
-    Run the React agent loop with conversation context.
+    Run the React agent loop with conversation context using MessageList.
     
     This is the React loop implementation. All agent interactions
     go through this function via AgentSession.
@@ -69,15 +69,19 @@ def run_react_loop(
     Args:
         react_agent: The initialized ReactAgent instance
         tool_registry: The tool registry for executing tools
-        trajectory: Pre-initialized trajectory with metadata
+        messages: Pre-initialized MessageList with metadata
         user_query: The user's question or task
         context_prompt: Conversation context (may be empty for first query)
         max_iterations: Maximum number of iterations
+        session: Optional AgentSession for stateful operations
         verbose: Whether to show detailed execution logs
         
     Returns:
-        Complete Trajectory object with all steps and observations
+        Complete MessageList with all messages and tool results
     """
+    # Use messages directly
+    message_list = messages
+    
     # Clean demo logging
     if verbose:
         print(f"{'='*80}")
@@ -89,50 +93,55 @@ def run_react_loop(
     logger.debug(f"Context size: {len(context_prompt)} chars")
     
     # Main agent loop
-    while trajectory.iteration_count < max_iterations:
+    while message_list.iteration_count < max_iterations:
         iteration_start = time.time()
-        iteration_num = trajectory.iteration_count + 1
+        iteration_num = message_list.iteration_count + 1
         
         # Get next action from agent with context
         # Always pass context - agents created via AgentSession always support it
-        trajectory = react_agent(
-            trajectory=trajectory,
+        message_list = react_agent(
+            message_list=message_list,
             user_query=user_query,
             conversation_context=context_prompt
         )
-
-        # Get the last step that was just added
-        last_step = trajectory.steps[-1]
         
-        # No injection needed - will be handled during execution
+        # Get the last message's last trajectory for tool info
+        last_message = message_list.messages[-1]
+        last_trajectory = None
+        tool_use = None
+        
+        for traj in last_message.trajectories:
+            if traj.thought:
+                last_trajectory = traj
+            if traj.tool_use:
+                tool_use = traj.tool_use
         
         # Demo logging for React iteration
         if verbose:
             print(f"react loop call {iteration_num} - log of results:")
-            if last_step.thought:
-                print(f"  Thought: {last_step.thought.content}")
-            if last_step.tool_invocation:
-                print(f"  Tool: {last_step.tool_invocation.tool_name}")
-                print(f"  Args: {last_step.tool_invocation.tool_args}")
-            elif last_step.is_finish:
-                print(f"  Action: Final Answer")
+            if last_trajectory and last_trajectory.thought:
+                print(f"  Thought: {last_trajectory.thought}")
+            if tool_use:
+                print(f"  Tool: {tool_use.tool_name}")
+                print(f"  Args: {tool_use.tool_args}")
+                if tool_use.tool_name == "finish":
+                    print(f"  Action: Final Answer")
             print()
         
         # Check if agent has decided to finish
-        if last_step.is_finish:
-            trajectory.completed_at = datetime.now()
+        if tool_use and tool_use.tool_name == "finish":
+            message_list.completed_at = datetime.now()
             break
         
-        # Execute the tool from the last step (only for real tools, not 'finish')
-        tool_invocation = last_step.tool_invocation
-        if not tool_invocation:
+        # Execute the tool if not finish
+        if not tool_use:
             # Shouldn't happen, but handle gracefully
-            logger.warning("No tool invocation in step")
-            trajectory.completed_at = datetime.now()
+            logger.warning("No tool invocation in message")
+            message_list.completed_at = datetime.now()
             break
         
-        tool_name = tool_invocation.tool_name
-        tool_args = tool_invocation.tool_args
+        tool_name = tool_use.tool_name
+        tool_args = tool_use.tool_args
         
         logger.debug(f"Tool args: {tool_args}")
         
@@ -153,7 +162,8 @@ def run_react_loop(
                     print(f"  Result: {result_str}")
                 
                 execution_time = (time.time() - iteration_start) * 1000
-                trajectory.add_observation(
+                message_list.add_tool_result(
+                    tool_use_id=tool_use.tool_use_id,
                     tool_name=tool_name,
                     status=ToolStatus.SUCCESS,
                     result=result,
@@ -163,7 +173,8 @@ def run_react_loop(
             except Exception as e:
                 # Handle tool execution errors
                 logger.error(f"Tool execution error: {e}", exc_info=True)
-                trajectory.add_observation(
+                message_list.add_tool_result(
+                    tool_use_id=tool_use.tool_use_id,
                     tool_name=tool_name,
                     status=ToolStatus.ERROR,
                     error=str(e),
@@ -172,7 +183,8 @@ def run_react_loop(
         else:
             # Handle unknown tool selection
             logger.warning(f"Unknown tool: {tool_name}")
-            trajectory.add_observation(
+            message_list.add_tool_result(
+                tool_use_id=tool_use.tool_use_id,
                 tool_name=tool_name,
                 status=ToolStatus.ERROR,
                 error=f"Unknown tool: {tool_name}",
@@ -180,49 +192,53 @@ def run_react_loop(
             )
     
     # Check if we hit the iteration limit
-    if trajectory.iteration_count >= max_iterations:
+    if message_list.iteration_count >= max_iterations:
         logger.warning(f"Reached maximum iterations ({max_iterations})")
     
-    if not trajectory.completed_at:
-        trajectory.completed_at = datetime.now()
+    if not message_list.completed_at:
+        message_list.completed_at = datetime.now()
     
     # Demo logging summary
     if verbose:
         print(f"summary:")
         print(f"✓ React loop completed")
-        print(f"  Total iterations: {trajectory.iteration_count}")
-        if trajectory.tools_used:
-            print(f"  Tools used: {', '.join(trajectory.tools_used)}")
+        print(f"  Total iterations: {message_list.iteration_count}")
+        if message_list.tools_used:
+            print(f"  Tools used: {', '.join(message_list.tools_used)}")
         else:
             print("  Tools used: None (used context)")
         print()
     
-    return trajectory
+    return message_list
 
 
 def extract_final_answer(
-    trajectory: Trajectory,
+    messages: MessageList,
     user_query: str,
     tool_set_name: str,
     verbose: bool = False
 ) -> ExtractResult:
     """
-    Extract the final answer from the trajectory using the Extract Agent.
+    Extract the final answer from the message list using the Extract Agent.
     
     This implements the Extract phase of the React → Extract → Observe pattern.
-    The Extract Agent analyzes the complete trajectory of thoughts, actions,
-    and observations to synthesize a coherent final answer.
+    The Extract Agent analyzes the complete message history to synthesize
+    a coherent final answer.
     
     Args:
-        trajectory: The complete Trajectory object from the React loop
+        messages: The complete MessageList from the React loop
         user_query: The original user query for context
         tool_set_name: Name of the tool set being used (for history saving)
+        verbose: Whether to show detailed execution logs
         
     Returns:
         ExtractResult with answer, reasoning, confidence, and sources
     """
-    logger.debug("Extracting final answer from trajectory")
-    logger.debug(f"Trajectory has {trajectory.iteration_count} steps")
+    # Use messages directly
+    message_list = messages
+    
+    logger.debug("Extracting final answer from message list")
+    logger.debug(f"Message list has {message_list.iteration_count} iterations")
     
     # Create a signature for answer extraction
     # This defines the contract for the Extract Agent
@@ -240,10 +256,10 @@ def extract_final_answer(
     # Initialize Extract Agent with Chain of Thought reasoning
     extract_agent = ReactExtract(signature=AnswerExtractionSignature)
     
-    # Extract answer from trajectory
+    # Extract answer from message list
     logger.debug("Calling Extract Agent")
     result = extract_agent(
-        trajectory=trajectory,
+        message_list=message_list,
         user_query=user_query
     )
     

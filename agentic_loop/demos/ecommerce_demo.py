@@ -17,6 +17,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 import logging
 from agentic_loop.session import AgentSession
 from shared import setup_llm
+from shared.config import config
 
 # Configure clean output - suppress LiteLLM logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -26,12 +27,12 @@ logger = logging.getLogger(__name__)
 def get_shopping_workflow():
     """Return the complete shopping workflow as connected queries."""
     return [
-        "Show me my recent orders",
-        "I want to return the headphones from order ORD002 because they're defective",
-        "Find me some gaming laptops under $1500", 
-        "Add the cheapest one to my cart",
-        "What's in my cart now and what's the total?",
-        "Checkout my cart and ship to 123 Tech Street, Demo City, CA 90210"
+        "Show me all my delivered orders and tell me which products I've bought the most",
+        "I need to return the headphones from ORD002 and also check if I can still return items from order ORD001",
+        "Find all gaming peripherals (keyboards, mice, headphones) under $200 with ratings above 4.0 and good stock levels", 
+        "Add the highest rated gaming keyboard and a gaming mouse to my cart",
+        "Review my cart - if the total is over $150, remove the cheapest item, then show me the final cart contents",
+        "Complete checkout with express shipping to 123 Tech Street, Demo City, CA 90210 and get me a tracking number"
     ]
 
 def main():
@@ -62,16 +63,18 @@ def main():
     queries = get_shopping_workflow()
     
     for i, query in enumerate(queries, 1):
-        print(f"{'─' * 60}")
-        print(f"Step {i}/{len(queries)}: {query}")
-        print(f"{'─' * 60}")
+        print("=" * 80)
+        print(f"QUERY {i}/{len(queries)}")
+        print("=" * 80)
+        print(f"{query}")
+        print()
         
         # Show context awareness for queries that reference previous results
         context_indicators = {
-            3: "References laptop search results from previous query", 
-            4: "References laptop search results from previous query",
-            5: "Checks cart state after previous additions",
-            6: "Completes checkout of accumulated cart items"
+            2: "References specific orders from query 1",
+            4: "Uses search results from query 3 to select items",
+            5: "Reviews and modifies cart from query 4",
+            6: "Completes checkout of modified cart from query 5"
         }
         
         if i in context_indicators:
@@ -79,8 +82,8 @@ def main():
         
         print()
         
-        # Execute query
-        result = session.query(query)
+        # Execute query with config max_iterations
+        result = session.query(query, max_iterations=config.max_iterations)
         
         # Track metrics
         total_iterations += result.iterations
@@ -89,26 +92,27 @@ def main():
         query_results.append(result)
         
         # Display result in separate section
-        print("🛒 Result:")
+        print("=" * 80)
+        print("RESULT")
+        print("=" * 80)
         # Wrap long answers for readability
         import textwrap
-        wrapped = textwrap.fill(result.answer, width=70,
-                               initial_indent="   ",
-                               subsequent_indent="   ")
+        wrapped = textwrap.fill(result.answer, width=76)
         print(wrapped)
         print()
         
         # Show execution metrics in separate section
-        print("📊 Execution Summary:")
-        print(f"  Time: {result.execution_time:.1f}s")
-        print(f"  Iterations: {result.iterations}")
+        print("=" * 80)
+        print("EXECUTION METRICS")
+        print("=" * 80)
+        print(f"Time: {result.execution_time:.1f}s")
+        print(f"Iterations: {result.iterations}")
         if result.tools_used:
-            print(f"  Tools: {', '.join(result.tools_used)}")
-        
-        # Show memory state
-        if len(session.history.trajectories) > 0:
-            print(f"  Memory: {len(session.history.trajectories)} transactions in context")
-        
+            print(f"Tools: {', '.join(result.tools_used)}")
+        else:
+            print("Tools: None (context only)")
+        if len(session.history.messages) > 0:
+            print(f"Memory: {len(session.history.messages)} messages in context")
         print()
     
     # Calculate final metrics
@@ -131,11 +135,11 @@ def main():
     print(f"Demo Type: E-commerce Workflow - Complete Shopping Journey")
     print()
     
-    print("-" * 80)
+    print("=" * 80)
     print("EXECUTION STATISTICS")
-    print("-" * 80)
+    print("=" * 80)
     print(f"{'Metric':<25} {'Value':<15} {'Details'}")
-    print("-" * 60)
+    print("=" * 80)
     print(f"{'Total Queries':<25} {len(queries):<15} Complete shopping workflow")
     print(f"{'Successful Queries':<25} {successful_queries}/{len(queries):<10} 100% success rate")
     print(f"{'Total Time':<25} {demo_total_time:.1f}s{'':<10} End-to-end execution")
@@ -143,22 +147,22 @@ def main():
     print(f"{'Total Iterations':<25} {total_iterations:<15} React loop iterations")
     print(f"{'Average Iterations':<25} {average_iterations:.1f}{'':<12} Per query average")
     print(f"{'Tools Used':<25} {len(total_tools_used):<15} {', '.join(sorted(total_tools_used))}")
-    print(f"{'Memory Trajectories':<25} {len(session.history.trajectories):<15} Conversation history")
+    print(f"{'Memory Messages':<25} {len(session.history.messages):<15} Conversation history")
     print(f"{'Memory Summaries':<25} {len(session.history.summaries):<15} History summaries")
     
     print()
-    print("-" * 80)
+    print("=" * 80)
     print("WORKFLOW BREAKDOWN")
-    print("-" * 80)
+    print("=" * 80)
     for i, (query, result) in enumerate(zip(queries, query_results), 1):
         status = "✓" if result.answer else "✗"
         tools = result.tools_used[0] if result.tools_used else "context-only"
         print(f"Step {i}: {status} {result.execution_time:.1f}s, {result.iterations} iter, {tools}")
         
     print()
-    print("-" * 80)
+    print("=" * 80)
     print("KEY DEMONSTRATIONS VERIFIED")
-    print("-" * 80)
+    print("=" * 80)
     print("✓ Order history and management")
     print("✓ Context-aware returns processing")
     print("✓ Product search and comparison")

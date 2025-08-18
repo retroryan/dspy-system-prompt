@@ -2,7 +2,7 @@
 Clean Manual Agent Loop implementation following DSPy ReAct patterns.
 
 This module provides a stateless agent loop that uses type-safe Pydantic
-trajectory models, following the React pattern with explicit tool selection.
+message models, following the React pattern with explicit tool selection.
 """
 
 import logging
@@ -11,7 +11,7 @@ import dspy
 
 from shared.tool_utils import BaseTool
 from shared.tool_utils.registry import ToolRegistry
-from shared.trajectory_models import Trajectory
+from shared.message_models import MessageList
 
 from typing import TYPE_CHECKING, Literal, Type
 
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 class ReactAgent(dspy.Module):
     """
-    React agent using type-safe Pydantic trajectory.
+    React agent using MessageList for simplified message handling.
     """
 
     def __init__(self, signature: Type["Signature"], tool_registry: ToolRegistry):
@@ -91,22 +91,22 @@ class ReactAgent(dspy.Module):
 
         self.react = dspy.Predict(react_signature)
 
-    def forward(self, trajectory: Trajectory, **input_args) -> Trajectory:
+    def forward(self, message_list: MessageList, **input_args) -> MessageList:
         """
-        Execute the reactive tool-calling loop with type-safe trajectory.
+        Execute the reactive tool-calling loop with MessageList.
         
-        The trajectory is updated with a new step containing the agent's
-        thought and tool invocation decision (including 'finish' if complete).
+        The message list is updated with a new assistant message containing
+        the agent's thought and tool invocation decision.
 
         Args:
-            trajectory: The Trajectory object to update
+            message_list: The MessageList object to update
             **input_args: Other signature input fields (e.g., user_query)
 
         Returns:
-            Updated trajectory with new step added
+            Updated MessageList with new assistant message added
         """
-        # Format trajectory for LLM
-        trajectory_text = trajectory.to_llm_format()
+        # Format messages for LLM
+        trajectory_text = message_list.to_llm_format()
         
         try:
             # Get prediction from LLM
@@ -114,9 +114,6 @@ class ReactAgent(dspy.Module):
                 **input_args,
                 trajectory=trajectory_text
             )
-            
-            # Add step to trajectory with type safety
-            # This handles both regular tools and the 'finish' pseudo-tool
             
             # Check if we got a valid response from the LLM
             if not pred.next_thought and not pred.next_tool_name:
@@ -129,7 +126,8 @@ class ReactAgent(dspy.Module):
             tool_name = pred.next_tool_name if pred.next_tool_name is not None else "finish"
             tool_args = pred.next_tool_args if pred.next_tool_args is not None else {}
             
-            trajectory.add_step(
+            # Add assistant message with thought and tool use
+            message_list.add_assistant_message(
                 thought=thought_content,
                 tool_name=tool_name,
                 tool_args=tool_args
@@ -138,10 +136,10 @@ class ReactAgent(dspy.Module):
         except Exception as err:
             self.logger.warning(f"Agent failed to select a valid tool: {err}")
             # On error, signal finish to prevent infinite loops
-            trajectory.add_step(
+            message_list.add_assistant_message(
                 thought=f"Error in agent reasoning: {str(err)}",
                 tool_name="finish",
                 tool_args={}
             )
 
-        return trajectory
+        return message_list
