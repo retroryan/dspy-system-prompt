@@ -193,7 +193,7 @@ class AgentSession:
             answer=answer,
             execution_time=execution_time,
             conversation_turn=self.conversation_turn,
-            had_context=len(context["messages"]) > 0
+            had_context=messages.metadata.get("has_context", False)
         )
     
     def reset(self) -> None:
@@ -263,7 +263,12 @@ class AgentSession:
         
         # Extract answer from result
         if hasattr(result, 'answer'):
-            return result.answer
+            answer = result.answer
+            # Ensure we always return a valid string
+            if answer is None:
+                logger.warning("Extract agent returned None, using fallback answer")
+                return "I apologize, but I couldn't generate a proper response. Please try rephrasing your question."
+            return str(answer) if answer else "No answer available."
         else:
             return str(result)
     

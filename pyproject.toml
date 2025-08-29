@@ -12,9 +12,13 @@ dspy = "3.0.0b2"
 pydantic = "^2.5.0"
 python-dotenv = "^1.0.0"
 pandas = "^2.2.0"
+fastapi = "^0.115.0"
+uvicorn = "^0.32.0"
+python-multipart = "^0.0.9"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.1"
+pytest-cov = "^6.2.1"
 
 [build-system]
 requires = ["poetry-core"]

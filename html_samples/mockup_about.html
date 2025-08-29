@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSPy Agent - About</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+        }
+        
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 2rem 1rem;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 3rem;
+            padding: 0 1rem;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .nav-menu {
+            list-style: none;
+        }
+        
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .nav-link:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+        
+        .nav-link.active {
+            background: #eff6ff;
+            color: var(--primary);
+            font-weight: 500;
+        }
+        
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 2rem 3rem;
+            max-width: 1200px;
+        }
+        
+        .page-header {
+            margin-bottom: 3rem;
+        }
+        
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, #2563eb, #8b5cf6);
+            color: white;
+            padding: 3rem;
+            border-radius: 16px;
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+        
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        
+        .hero-description {
+            font-size: 1.25rem;
+            opacity: 0.95;
+            max-width: 800px;
+            margin: 0 auto 2rem;
+            line-height: 1.6;
+        }
+        
+        .version-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1.5rem;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .info-card {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+        
+        .info-icon {
+            width: 48px;
+            height: 48px;
+            background: #f3f4f6;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 1rem;
+        }
+        
+        .info-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+        
+        .info-description {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        .feature-list {
+            list-style: none;
+            margin-top: 1rem;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+        }
+        
+        .feature-check {
+            color: var(--success);
+        }
+        
+        .architecture-section {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+        
+        .architecture-diagram {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .diagram-placeholder {
+            display: inline-block;
+            padding: 4rem 6rem;
+            background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+            border-radius: 12px;
+            color: #4c1d95;
+            font-weight: 600;
+        }
+        
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .tech-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: #f3f4f6;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        
+        .docs-section {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .docs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .doc-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+        
+        .doc-link:hover {
+            background: var(--surface);
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .doc-icon {
+            font-size: 1.5rem;
+        }
+        
+        .doc-content {
+            flex: 1;
+        }
+        
+        .doc-title {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        
+        .doc-description {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .team-section {
+            text-align: center;
+            padding: 2rem;
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        
+        .team-grid {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-top: 2rem;
+        }
+        
+        .team-member {
+            text-align: center;
+        }
+        
+        .member-avatar {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+        
+        .member-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .member-role {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">D</div>
+                <div class="logo-text">DSPy Agent</div>
+            </div>
+            
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Dashboard')">
+                            <span class="nav-icon">🏠</span>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Demos')">
+                            <span class="nav-icon">🚀</span>
+                            <span>Demos</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Admin Settings')">
+                            <span class="nav-icon">⚙️</span>
+                            <span>Admin Settings</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Advanced Chatbot')">
+                            <span class="nav-icon">🤖</span>
+                            <span>Advanced</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link active" onclick="alert('About page (current)')">
+                            <span class="nav-icon">ℹ️</span>
+                            <span>About</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Hero Section -->
+            <div class="hero-section">
+                <h1 class="hero-title">DSPy Agent System</h1>
+                <p class="hero-description">
+                    A powerful agentic loop architecture built with DSPy, featuring session-based interactions, 
+                    always-on conversation history, and comprehensive tool integration for real-world applications.
+                </p>
+                <span class="version-badge">Version 1.0.0</span>
+            </div>
+            
+            <!-- Key Features -->
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="info-icon">🎯</div>
+                    <h3 class="info-title">Session-Based Architecture</h3>
+                    <p class="info-description">
+                        Unified entry point through AgentSession class with automatic context management and type-safe responses.
+                    </p>
+                    <ul class="feature-list">
+                        <li class="feature-item">
+                            <span class="feature-check">✓</span>
+                            <span>Single API: session.query()</span>
+                        </li>
+                        <li class="feature-item">
+                            <span class="feature-check">✓</span>
+                            <span>Automatic context handling</span>
+                        </li>
+                        <li class="feature-item">
+                            <span class="feature-check">✓</span>
+                            <span>Type-safe Pydantic models</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="info-card">
+                    <div class="info-icon">🧠</div>
+                    <h3 class="info-title">Intelligent Memory</h3>
+                    <p class="info-description">
+                        Always-on conversation history with sliding window management and smart summarization for long contexts.
+                    </p>
+                    <ul class="feature-list">
+                        <li class="feature-item">
+                            <span class="feature-check">✓</span>
+                            <span>Sliding window memory</span>
+                        </li>
+                        <li class="feature-item">
+                            <span class="feature-check">✓</span>
+                            <span>Trajectory tracking</span>
+                        </li>
+                        <li class="feature-item">
+                            <span class="feature-check">✓</span>
+                            <span>Context preservation</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="info-card">
+                    <div class="info-icon">🔧</div>
+                    <h3 class="info-title">Comprehensive Tools</h3>
+                    <p class="info-description">
+                        Rich set of tools for e-commerce, agriculture, weather analysis, and more with full test coverage.
+                    </p>
+                    <ul class="feature-list">
+                        <li class="feature-item">
+                            <span class="feature-check">✓</span>
+                            <span>12+ integrated tools</span>
+                        </li>
+                        <li class="feature-item">
+                            <span class="feature-check">✓</span>
+                            <span>Type-safe arguments</span>
+                        </li>
+                        <li class="feature-item">
+                            <span class="feature-check">✓</span>
+                            <span>22+ test scenarios</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Architecture Section -->
+            <div class="architecture-section">
+                <h2 class="section-title">System Architecture</h2>
+                <div class="architecture-diagram">
+                    <div class="diagram-placeholder">
+                        Architecture Diagram
+                    </div>
+                </div>
+                <p style="margin-bottom: 1.5rem; color: var(--text-secondary); line-height: 1.6;">
+                    The DSPy Agent System follows a clean, modular architecture with clear separation of concerns. 
+                    The core React loop implementation provides flexible tool execution, while the session layer 
+                    manages conversation history and context automatically.
+                </p>
+                <h3 style="font-weight: 600; margin-bottom: 1rem;">Technology Stack</h3>
+                <div class="tech-stack">
+                    <span class="tech-badge">DSPy Framework</span>
+                    <span class="tech-badge">Python 3.8+</span>
+                    <span class="tech-badge">Pydantic</span>
+                    <span class="tech-badge">Ollama</span>
+                    <span class="tech-badge">Claude API</span>
+                    <span class="tech-badge">OpenAI</span>
+                    <span class="tech-badge">Gemini</span>
+                    <span class="tech-badge">Poetry</span>
+                </div>
+            </div>
+            
+            <!-- Documentation Section -->
+            <div class="docs-section">
+                <h2 class="section-title">Documentation & Resources</h2>
+                <div class="docs-grid">
+                    <a href="#" class="doc-link" onclick="alert('Opening Getting Started guide...'); return false;">
+                        <span class="doc-icon">📚</span>
+                        <div class="doc-content">
+                            <div class="doc-title">Getting Started</div>
+                            <div class="doc-description">Quick setup and first steps</div>
+                        </div>
+                    </a>
+                    
+                    <a href="#" class="doc-link" onclick="alert('Opening API Reference...'); return false;">
+                        <span class="doc-icon">📖</span>
+                        <div class="doc-content">
+                            <div class="doc-title">API Reference</div>
+                            <div class="doc-description">Complete API documentation</div>
+                        </div>
+                    </a>
+                    
+                    <a href="#" class="doc-link" onclick="alert('Opening Tool Development guide...'); return false;">
+                        <span class="doc-icon">🔨</span>
+                        <div class="doc-content">
+                            <div class="doc-title">Tool Development</div>
+                            <div class="doc-description">Create custom tools</div>
+                        </div>
+                    </a>
+                    
+                    <a href="#" class="doc-link" onclick="alert('Opening Examples...'); return false;">
+                        <span class="doc-icon">💡</span>
+                        <div class="doc-content">
+                            <div class="doc-title">Examples</div>
+                            <div class="doc-description">Sample implementations</div>
+                        </div>
+                    </a>
+                    
+                    <a href="#" class="doc-link" onclick="alert('Opening GitHub repository...'); return false;">
+                        <span class="doc-icon">🐙</span>
+                        <div class="doc-content">
+                            <div class="doc-title">GitHub</div>
+                            <div class="doc-description">Source code repository</div>
+                        </div>
+                    </a>
+                    
+                    <a href="#" class="doc-link" onclick="alert('Opening Support channel...'); return false;">
+                        <span class="doc-icon">💬</span>
+                        <div class="doc-content">
+                            <div class="doc-title">Support</div>
+                            <div class="doc-description">Get help & report issues</div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Team Section -->
+            <div class="team-section">
+                <h2 class="section-title">Built by the DSPy Team</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    Dedicated to creating powerful, simple, and effective AI agent systems
+                </p>
+                <div class="team-grid">
+                    <div class="team-member">
+                        <div class="member-avatar">👨‍💻</div>
+                        <div class="member-name">Lead Developer</div>
+                        <div class="member-role">Architecture & Core</div>
+                    </div>
+                    <div class="team-member">
+                        <div class="member-avatar">👩‍💻</div>
+                        <div class="member-name">ML Engineer</div>
+                        <div class="member-role">DSPy Integration</div>
+                    </div>
+                    <div class="team-member">
+                        <div class="member-avatar">👨‍🔬</div>
+                        <div class="member-name">Research Lead</div>
+                        <div class="member-role">Algorithm Design</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Scheme 5: Midnight Blue</title>
+    <style>
+        :root {
+            --primary: #1e293b;
+            --primary-light: #334155;
+            --primary-dark: #0f172a;
+            --secondary: #475569;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --warning: #fbbf24;
+            --error: #ef4444;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --border: #cbd5e1;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--background);
+            color: var(--text-primary);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(30, 41, 59, 0.2);
+        }
+        
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .color-card {
+            background: var(--surface);
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .color-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .color-swatch {
+            height: 80px;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin: 2rem 0;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+        
+        .btn-accent {
+            background: var(--accent);
+            color: white;
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: var(--warning);
+            color: var(--text-primary);
+        }
+        
+        .btn-error {
+            background: var(--error);
+            color: white;
+        }
+        
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Midnight Blue Color Scheme</h1>
+            <p>A sleek, professional palette with deep slate blues perfect for modern applications</p>
+        </div>
+        
+        <div class="color-grid">
+            <div class="color-card">
+                <div class="color-swatch" style="background: var(--primary);">Primary</div>
+                <h3>Primary</h3>
+                <code>#1e293b</code>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background: var(--secondary);">Secondary</div>
+                <h3>Secondary</h3>
+                <code>#475569</code>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background: var(--accent);">Accent</div>
+                <h3>Accent</h3>
+                <code>#3b82f6</code>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background: var(--success);">Success</div>
+                <h3>Success</h3>
+                <code>#10b981</code>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background: var(--warning);">Warning</div>
+                <h3>Warning</h3>
+                <code>#fbbf24</code>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background: var(--error);">Error</div>
+                <h3>Error</h3>
+                <code>#ef4444</code>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Interactive Components</h2>
+            <div class="buttons">
+                <button class="btn btn-primary">Primary Button</button>
+                <button class="btn btn-secondary">Secondary Button</button>
+                <button class="btn btn-accent">Accent Button</button>
+                <button class="btn btn-success">Success</button>
+                <button class="btn btn-warning">Warning</button>
+                <button class="btn btn-error">Error</button>
+            </div>
+            
+            <div class="input-group">
+                <label>Example Input Field</label>
+                <input type="text" placeholder="Type something...">
+            </div>
+            
+            <div class="input-group">
+                <label>Another Input</label>
+                <input type="text" placeholder="Focus to see effect...">
+            </div>
+        </div>
+    </div>
+</body>
+</html>
