@@ -4,11 +4,12 @@
 if [ $# -eq 0 ]; then
     echo "Usage: ./mockup_html.sh <page>"
     echo "Available pages:"
-    echo "  1 - Dashboard (Main overview page)"
-    echo "  2 - Demos (Run Demo Scripts)"
-    echo "  3 - Admin Settings (System health and configuration)"
-    echo "  4 - Advanced Chatbot (Interactive agent with loop visualization)"
-    echo "  5 - About (System information and documentation)"
+    echo "  1 - Chatbot (Main chat interface - DEFAULT)"
+    echo "  2 - Dashboard (System overview and metrics)"
+    echo "  3 - Demos (Run Demo Scripts)"
+    echo "  4 - Admin Settings (System health and configuration)"
+    echo "  5 - Advanced (Interactive agent with loop visualization)"
+    echo "  6 - About (System information and documentation)"
     exit 1
 fi
 
@@ -16,8 +17,8 @@ fi
 PAGE=$1
 
 # Validate input
-if ! [[ "$PAGE" =~ ^[1-5]$ ]]; then
-    echo "Error: Please provide a number between 1 and 5"
+if ! [[ "$PAGE" =~ ^[1-6]$ ]]; then
+    echo "Error: Please provide a number between 1 and 6"
     exit 1
 fi
 
@@ -26,11 +27,12 @@ BASE_DIR="$(dirname "$0")/html_samples"
 
 # Map numbers to file names
 case $PAGE in
-    1) FILE="mockup_dashboard.html" ;;
-    2) FILE="mockup_demos.html" ;;
-    3) FILE="mockup_admin.html" ;;
-    4) FILE="mockup_advanced.html" ;;
-    5) FILE="mockup_about.html" ;;
+    1) FILE="mockup_chatbot.html" ;;
+    2) FILE="mockup_dashboard.html" ;;
+    3) FILE="mockup_demos.html" ;;
+    4) FILE="mockup_admin.html" ;;
+    5) FILE="mockup_advanced.html" ;;
+    6) FILE="mockup_about.html" ;;
 esac
 
 # Full path to the HTML file
