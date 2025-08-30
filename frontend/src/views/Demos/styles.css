@@ -1,0 +1,266 @@
+.demos-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.demos-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Demo Cards Section */
+.demo-cards-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.demo-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.demo-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.demo-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.demo-card.selected {
+  border-color: var(--primary);
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+
+.demo-card.running {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.demo-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.demo-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.demo-description {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.demo-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.demo-tag {
+  background: var(--tag-bg, #e2e8f0);
+  color: var(--tag-color, #475569);
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.demo-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.demo-time {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.run-demo-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.run-demo-btn:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.run-demo-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Terminal Section */
+.terminal-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.terminal-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.running-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.pulse {
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.clear-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clear-btn:hover:not(:disabled) {
+  background: var(--hover-bg);
+  border-color: var(--primary);
+}
+
+.clear-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Terminal Output */
+.terminal-output {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  border-radius: 8px;
+  padding: 1rem;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 400px;
+}
+
+.terminal-empty {
+  color: #6b7280;
+}
+
+.terminal-line {
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.terminal-timestamp {
+  color: #6b7280;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.terminal-prompt {
+  color: #10b981;
+  font-weight: bold;
+}
+
+.terminal-text {
+  flex: 1;
+  word-break: break-word;
+}
+
+.terminal-line.command {
+  color: #60a5fa;
+}
+
+.terminal-line.info {
+  color: #a78bfa;
+}
+
+.terminal-line.output {
+  color: #d4d4d4;
+}
+
+.terminal-line.success {
+  color: #10b981;
+  font-weight: 500;
+}
+
+.terminal-line.error {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.terminal-cursor {
+  color: #10b981;
+  animation: blink 1s infinite;
+}
+
+.terminal-cursor.blinking {
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.terminal-hint {
+  color: #6b7280;
+  margin-left: 0.5rem;
+}

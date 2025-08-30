@@ -1,0 +1,6 @@
+{
+  "provider": "ollama",
+  "model": "llama3.2:3b",
+  "temperature": 0.8,
+  "max_tokens": 2048
+}

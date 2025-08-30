@@ -1,16 +1,19 @@
-# Frontend Guide for DSPy Agentic Loop Demo
+# Frontend Guide for DSPy Agentic Loop Demo SPA
 
 ## Overview
 
-The DSPy Agentic Loop Demo frontend provides a clean, intuitive chat interface for interacting with the DSPy-powered agent system. Built with React and Vite, it offers real-time conversation capabilities with different tool sets for specialized workflows like e-commerce, agriculture, and event management.
+The DSPy Agentic Loop Demo frontend is a complete single-page application (SPA) that provides a comprehensive interface for interacting with the DSPy-powered agent system. Built with React and Vite, it offers six distinct views showcasing different aspects of the agent capabilities, from real-time conversations to system administration.
 
 ### Key Features
 
+- **Six Integrated Views**: Chatbot, Dashboard, Demos, Admin Settings, Advanced, and About
 - **Real-time Chat Interface**: Smooth, responsive messaging with auto-scrolling
-- **Tool Set Selection**: Switch between different agent capabilities on the fly
-- **Session Management**: Automatic session creation and lifecycle handling  
-- **Performance Metrics**: View execution time, iterations, and tools used
-- **Clean User Experience**: Minimal, focused design with clear visual feedback
+- **Demo Execution System**: Run pre-configured workflows with live output streaming
+- **Configuration Management**: Persistent settings for LLM, agents, tools, and API
+- **System Monitoring**: Real-time metrics, health status, and activity tracking
+- **Advanced Visualization**: React loop visualization and tool execution display
+- **Error Boundaries**: Graceful error handling with user-friendly recovery
+- **Professional UI**: Modern, clean design with consistent theming
 
 ## Quick Start
 
@@ -39,42 +42,27 @@ Before getting started, ensure you have:
    ```
 
 4. **Open your browser**
-   Navigate to http://localhost:3000 to see the application
+   Navigate to http://localhost:3001 to see the application
 
-### Running Tests (Quick Start)
+### Backend API Setup
 
-To verify the demo works correctly:
+Ensure the backend is running:
 
 ```bash
-# Run all tests with visual interface
-npm test
-
-# Or run all tests in terminal (headless)
-npm run test:headless
+# From project root
+poetry run uvicorn api.main:app --host localhost --port 8000 --reload
 ```
-
-Tests take about 22 seconds and verify all demo-critical functionality.
 
 ### First Interaction
 
 Once the application loads:
 
-1. The system automatically creates a session with the default e-commerce tool set
-2. Type a query in the input field at the bottom (try "Show me laptops under $1000")
-3. Press Enter or click Send to submit your query
-4. Watch as the agent processes your request and returns a response
-5. Continue the conversation - the agent remembers context from previous messages
-
-### Switching Tool Sets
-
-To change the agent's capabilities:
-
-1. Use the dropdown menu in the header labeled "Tool Set"
-2. Select from available options:
-   - **E-commerce**: Product search, orders, checkout workflows
-   - **Agriculture**: Weather analysis, planting decisions, farming advice
-   - **Events**: Event scheduling, venue management, registration handling
-3. Changing tool sets creates a new session and clears the conversation
+1. **Dashboard View** (default landing): See system metrics and recent activity
+2. **Chatbot View**: Interactive AI conversations with different tool sets
+3. **Demo Runner**: Execute pre-configured workflows like agriculture or e-commerce
+4. **Admin Settings**: Configure system parameters and monitor health
+5. **Advanced View**: Visualize the React loop and tool executions
+6. **About Page**: Learn about the system architecture and capabilities
 
 ## Architecture
 
@@ -85,22 +73,54 @@ The frontend follows a clean, modular architecture with clear separation of conc
 ```
 Frontend Application
 │
-├── React Components
-│   ├── App.jsx (Main container)
-│   ├── ChatWindow (Message display)
-│   ├── MessageBubble (Individual messages)
-│   ├── LoadingIndicator (Processing feedback)
-│   └── ToolSetSelector (Tool set switching)
+├── App.jsx (Main container with routing)
 │
-├── Custom Hook
-│   └── useSession (Session & state management)
+├── Components/
+│   ├── layout/
+│   │   ├── Layout.jsx (Main layout wrapper)
+│   │   └── Sidebar.jsx (Navigation sidebar)
+│   ├── ErrorBoundary.jsx (Error handling)
+│   └── LoadingIndicator.jsx (Loading states)
 │
-├── API Client
+├── Views/
+│   ├── Dashboard/ (System overview)
+│   │   ├── index.jsx
+│   │   ├── MetricCard.jsx
+│   │   ├── ActivityFeed.jsx
+│   │   └── QuickActions.jsx
+│   ├── Chatbot/ (AI conversation)
+│   │   ├── index.jsx
+│   │   ├── ChatContainer.jsx
+│   │   ├── Message.jsx
+│   │   ├── MessageInput.jsx
+│   │   ├── SessionPanel.jsx
+│   │   └── WelcomeScreen.jsx
+│   ├── Demos/ (Workflow execution)
+│   │   ├── index.jsx
+│   │   ├── DemoCard.jsx
+│   │   └── TerminalOutput.jsx
+│   ├── AdminSettings/ (Configuration)
+│   │   ├── index.jsx
+│   │   ├── ConfigSection.jsx
+│   │   └── SystemHealth.jsx
+│   ├── Advanced/ (Visualization)
+│   │   ├── index.jsx
+│   │   ├── LoopVisualization.jsx
+│   │   └── ToolExecutionPanel.jsx
+│   └── About/ (Information)
+│       └── index.jsx
+│
+├── Services/
 │   └── api.js (Backend communication)
 │
-└── Constants & Styles
-    ├── messageRoles.js (Role definitions)
-    └── App.css (Styling)
+├── Utils/
+│   └── configTransforms.js (Data transformations)
+│
+├── Hooks/
+│   └── useSession.js (Session management)
+│
+└── Styles/
+    └── global.css (Global styling)
 ```
 
 ### Data Flow
@@ -108,268 +128,291 @@ Frontend Application
 The application follows a unidirectional data flow pattern:
 
 ```
-User Input → useSession Hook → API Client → Backend
-                ↓                              ↓
-            Local State ← ← ← ← Response Processing
-                ↓
-            UI Update → User Sees Response
+User Interaction → View Component → API Service → Backend
+                        ↓                            ↓
+                   Local State ← ← ← Response Processing
+                        ↓
+                   UI Update → User Sees Result
 ```
 
-### Session Lifecycle
+### API Integration
 
-Sessions are the core abstraction for managing conversations:
+The frontend communicates with the backend through a comprehensive REST API:
 
 ```
-Application Load
-      ↓
-Create Session (automatic)
-      ↓
-User Sends Query → Add to Messages → Send to Backend
-                        ↓                    ↓
-                  Show Loading ← ← ← Process Query
-                        ↓                    ↓
-                  Hide Loading ← ← ← Return Answer
-                        ↓
-                  Add Response to Messages
-                        ↓
-                  Ready for Next Query
+Frontend (Port 3001)
+    ↓
+Vite Proxy Configuration
+    ↓
+Backend API (Port 8000)
+    ├── Sessions
+    │   ├── POST /sessions (Create session)
+    │   ├── POST /sessions/{id}/query (Execute query)
+    │   └── DELETE /sessions/{id} (End session)
+    ├── Demos
+    │   ├── POST /demos (Start demo)
+    │   ├── GET /demos/{id} (Get status)
+    │   └── GET /demos/{id}/output (Stream output)
+    ├── Configuration
+    │   ├── GET /config/{section} (Get config)
+    │   └── POST /config/{section} (Update config)
+    ├── System
+    │   ├── GET /system/status (Health status)
+    │   ├── GET /system/metrics (System metrics)
+    │   └── POST /system/actions (Admin actions)
+    └── Tools
+        └── GET /tool-sets (Available tools)
 ```
 
 ### State Management
 
-The application uses React hooks for state management:
+Each view manages its own state using React hooks:
 
-- **Session State**: Managed by useSession custom hook
-  - Session ID for backend correlation
-  - Message history array
-  - Loading and error states
-  - Current tool set selection
-  - Query counter
+**Dashboard State**
+- Metrics data (queries, sessions, executions)
+- Activity feed (recent demos and actions)
+- Loading and error states
 
-- **UI State**: Managed in App component
-  - Input field value
-  - Component visibility
+**Chatbot State**
+- Session management via useSession hook
+- Message history
+- Tool set selection
+- Conversation context
 
-### API Integration
+**Demo Runner State**
+- Selected demo type
+- Execution status
+- Real-time output streaming
+- Demo metrics
 
-The frontend communicates with the backend through a clean REST API:
-
-```
-Frontend (Port 3000)
-    ↓
-Vite Proxy
-    ↓
-Backend API (Port 8000)
-    ├── POST /sessions (Create session)
-    ├── POST /sessions/{id}/query (Execute query)
-    ├── DELETE /sessions/{id} (End session)
-    └── GET /tool-sets (List available tools)
-```
-
-### Component Responsibilities
-
-Each component has a single, well-defined purpose:
-
-**App.jsx**
-- Main application container
-- Handles form submission
-- Manages input state
-- Coordinates child components
-
-**useSession Hook**
-- Encapsulates all session logic
-- Manages API communication
-- Handles state updates
-- Provides clean interface to components
-
-**ChatWindow**
-- Displays message list
-- Handles auto-scrolling
-- Shows empty state
-- Manages loading indicator
-
-**MessageBubble**
-- Renders individual messages
-- Applies role-based styling
-- Displays metadata when available
-
-**ToolSetSelector**
-- Fetches available tool sets
-- Handles selection changes
-- Shows loading state
-- Provides descriptive labels
-
-**API Client**
-- Centralizes backend communication
-- Handles errors consistently
-- Manages request/response transformation
-- Provides typed interfaces
+**Admin Settings State**
+- Configuration sections (LLM, Agent, Tools, API)
+- System health metrics
+- Pending changes tracking
 
 ### Error Handling
 
-The application implements robust error handling:
+Comprehensive error handling throughout:
 
-1. **Network Errors**: Caught and displayed with retry option
-2. **Session Errors**: Automatic recovery with new session creation
-3. **Query Timeouts**: Clear feedback with option to retry
-4. **Validation Errors**: Prevented through input validation
+1. **Error Boundaries**: React error boundaries catch and display errors gracefully
+2. **API Error Handling**: All API calls wrapped with try-catch
+3. **Loading States**: Clear feedback during async operations
+4. **User Feedback**: Informative error messages with recovery options
+5. **Retry Mechanisms**: Automatic retry for transient failures
 
 ### Performance Optimizations
 
-The frontend includes several performance optimizations:
+- **Polling Optimization**: Smart polling intervals based on activity
+- **Component Memoization**: Prevent unnecessary re-renders
+- **Lazy Loading**: Views loaded on demand
+- **Debounced Updates**: Prevent excessive API calls
+- **Virtual Scrolling**: Efficient rendering of long lists
 
-- **Efficient Re-renders**: Components only update when necessary
-- **Auto-scroll Optimization**: Smooth scrolling without layout thrashing
-- **Debounced Input**: Prevents excessive validation checks
-- **Lazy Tool Set Loading**: Tool sets fetched only when needed
-- **Message Deduplication**: Unique IDs prevent duplicate renders
+## Key Features by View
 
-### Styling Architecture
+### Dashboard
+- Real-time system metrics
+- Activity feed from recent demos
+- Quick action buttons for common tasks
+- Auto-refresh every 30 seconds
 
-The application uses vanilla CSS with a component-based approach:
+### Chatbot
+- Multiple tool set support (e-commerce, agriculture, events)
+- Conversation history with context
+- Welcome screen with suggested prompts
+- Session management panel
+- Markdown rendering for responses
 
-- **App.css**: Main application styles and layout
-- **index.css**: Global resets and base styles
-- **Component Classes**: BEM-style naming for clarity
-- **Responsive Design**: Works on desktop and tablet screens
-- **Dark Mode Ready**: CSS variables for easy theming
+### Demo Runner
+- Pre-configured demo workflows
+- Real-time output streaming
+- Execution metrics (time, iterations, tools)
+- Demo cards with descriptions
+- Terminal-style output display
 
-## Testing Guide (Advanced Options)
+### Admin Settings
+- Configuration management for:
+  - LLM settings (provider, model, temperature)
+  - Agent parameters (iterations, timeout, memory)
+  - Tool toggles (weather, search, calculator)
+  - API settings (endpoint, timeout, retries)
+- System health monitoring
+- Administrative actions (logs, restart, cache clear)
+
+### Advanced View
+- React loop visualization
+- Tool execution timeline
+- Memory management display
+- Real-time updates during execution
+
+### About Page
+- System architecture overview
+- API documentation links
+- Version information
+- Contact details
+
+## Backend Architecture Improvements
+
+The frontend connects to an enhanced backend with:
+
+### Dependency Injection System
+- Proper DI using FastAPI's Depends
+- No global singletons
+- Clean separation of concerns
+- Located in `api/core/dependencies.py`
+
+### Thread-Safe Demo Execution
+- Concurrent demo execution support
+- Proper locking mechanisms
+- Real-time output capture
+- Status tracking
+
+### Configuration Persistence
+- File-based configuration storage
+- Validation with Pydantic models
+- Hot-reload support
+
+### Enhanced Monitoring
+- System metrics with psutil
+- Demo execution statistics
+- Tool usage tracking
+- Real-time health checks
+
+## Development Guide
+
+### Running in Development
+
+```bash
+# Terminal 1: Backend
+cd /path/to/project
+poetry run uvicorn api.main:app --reload
+
+# Terminal 2: Frontend
+cd frontend
+npm run dev
+
+# Terminal 3: Tests (optional)
+npm test
+```
+
+### Building for Production
+
+```bash
+npm run build
+# Outputs to frontend/dist/
+```
+
+### Environment Variables
+
+Create `.env` file in frontend directory:
+
+```env
+VITE_API_URL=http://localhost:8000
+```
+
+### Adding New Features
+
+1. **New View**: Create folder in `src/views/`
+2. **New Component**: Add to appropriate folder
+3. **New API Endpoint**: Update `src/services/api.js`
+4. **New Utility**: Add to `src/utils/`
+
+### Code Style
+
+- Use functional components with hooks
+- Follow existing naming conventions
+- Keep components focused and small
+- Use proper error handling
+- Add loading states for async operations
+
+## Testing Guide
 
 ### Test Structure
-
-The test suite uses Cypress for end-to-end testing of demo-critical functionality:
 
 ```
 cypress/
 ├── e2e/
-│   ├── app-launch.cy.js         # Application startup (2 tests)
-│   ├── query-interaction.cy.js  # Core chat features (4 tests)
-│   ├── tool-set.cy.js          # Tool set switching (5 tests)
-│   ├── error-handling.cy.js    # Error recovery (5 tests)
-│   └── conversation-flow.cy.js # Multi-turn chats (6 tests)
+│   ├── navigation.cy.js      # View navigation
+│   ├── chatbot.cy.js        # Chat functionality
+│   ├── dashboard.cy.js      # Dashboard metrics
+│   ├── demos.cy.js          # Demo execution
+│   ├── admin-settings.cy.js # Configuration
+│   └── integration.cy.js    # Full workflows
 └── support/
-    └── commands.js              # Custom Cypress commands
+    └── commands.js           # Helper commands
 ```
 
-### Running Specific Tests
+### Running Tests
 
 ```bash
-# Run a single test file
-npm run test:headless -- --spec cypress/e2e/app-launch.cy.js
-
-# Run tests matching a pattern
-npm run test:headless -- --spec "cypress/e2e/*interaction*.js"
-
-# Run with Chrome specifically
-npx cypress run --browser chrome
-```
-
-### Interactive Debugging
-
-For debugging test failures:
-
-```bash
-# Open Cypress UI
+# Interactive mode
 npm test
 
-# In the Cypress interface:
-# 1. Click on any test file to run it
-# 2. Watch tests execute step-by-step
-# 3. Use time-travel to see what happened
-# 4. Inspect network requests and responses
-# 5. View console output and errors
+# Headless mode
+npm run test:headless
+
+# Specific test
+npm run test:headless -- --spec cypress/e2e/demos.cy.js
 ```
 
-### Custom Commands
+## Deployment Considerations
 
-Available helper commands in tests:
+### Production Build
 
-- `cy.waitForSession()` - Waits for session to be created
-- `cy.submitQuery(text)` - Types query and waits for response
+1. Set production API URL in environment
+2. Build frontend: `npm run build`
+3. Serve static files from `dist/`
+4. Configure reverse proxy for API
 
-### Writing New Tests
+### Performance Monitoring
 
-Add tests for new demo features:
+- Monitor API response times
+- Track error rates
+- Watch memory usage
+- Monitor concurrent sessions
 
-```javascript
-// cypress/e2e/new-feature.cy.js
-describe('New Feature', () => {
-  beforeEach(() => {
-    cy.visit('/')
-    cy.waitForSession()
-  })
-  
-  it('should work correctly', () => {
-    // Your test logic here
-    cy.get('.element').should('be.visible')
-  })
-})
-```
+### Security
 
-### Test Configuration
+- Implement authentication if needed
+- Use HTTPS in production
+- Validate all user inputs
+- Sanitize API responses
 
-Modify `cypress.config.js` for custom settings:
+## Troubleshooting
 
-- `baseUrl`: Frontend URL (default: http://localhost:3000)
-- `defaultCommandTimeout`: How long to wait for elements (default: 10s)
-- `viewportWidth/Height`: Browser dimensions for tests
-- `video`: Enable/disable video recording (default: false)
+### Common Issues
 
-### Troubleshooting Test Failures
+**Frontend won't start:**
+- Check Node.js version (18+)
+- Clear node_modules and reinstall
+- Check port 3001 availability
 
-#### Common Issues and Solutions
+**API connection errors:**
+- Verify backend is running on port 8000
+- Check proxy configuration in vite.config.js
+- Look for CORS issues
 
-**Timeouts waiting for elements:**
-- Increase timeout: `cy.get('.element', { timeout: 20000 })`
-- Ensure backend is running: `curl http://localhost:8000/health`
-
-**Session creation failures:**
+**Demo execution fails:**
 - Check backend logs for errors
-- Clear browser storage: `cy.clearLocalStorage()`
+- Verify tool sets are configured
+- Ensure AgentSession parameters are correct
 
-**Flaky tests (intermittent failures):**
-- Add explicit waits: `cy.wait(500)`
-- Use more specific selectors
-- Check network tab for failed requests
-
-**Tests pass individually but fail together:**
-- Add cleanup in `afterEach` hooks
-- Ensure proper test isolation
-- Check for state pollution between tests
-
-### Performance Considerations
-
-- Keep total test runtime under 2 minutes
-- Focus on critical demo paths only
-- Avoid testing edge cases not shown in demos
-- Use `--headless` mode for faster execution
-
-### Continuous Testing During Development
-
-For active development:
-
-```bash
-# Terminal 1: Backend
-poetry run python api/main.py
-
-# Terminal 2: Frontend
-npm run dev
-
-# Terminal 3: Cypress (keep open)
-npm test
-# Re-run specific tests as you make changes
-```
-
-### Test Maintenance
-
-- Update tests when UI changes significantly
-- Remove tests for deprecated features
-- Keep test code simple and readable
-- Document why each test exists
+**Configuration not saving:**
+- Check file permissions for config directory
+- Verify Pydantic model validation
+- Look for API errors in network tab
 
 ## Summary
 
-The DSPy Agentic Loop Demo frontend provides a production-ready interface for interacting with the agent system. Its clean architecture, robust error handling, and intuitive user experience make it an excellent foundation for demonstrating the capabilities of the DSPy-powered backend. The modular design allows for easy extension and customization while maintaining simplicity and performance.
+The DSPy Agentic Loop Demo frontend is a comprehensive SPA that showcases the full capabilities of the DSPy-powered backend. With six integrated views, real-time updates, and professional error handling, it provides an excellent demonstration platform for the agent system.
 
-The integrated Cypress test suite ensures demo reliability with minimal overhead, providing confidence that presentations will work flawlessly while keeping the testing approach simple and maintainable.
+The modular architecture, clean code organization, and robust testing ensure maintainability and reliability. The recent architectural improvements, including proper dependency injection and thread safety, make this a production-ready demonstration system.
+
+Key achievements:
+- ✅ Complete SPA with 6 views
+- ✅ Real backend integration (no mocks)
+- ✅ Professional error handling
+- ✅ Clean architecture with DI
+- ✅ Thread-safe operations
+- ✅ Comprehensive testing
+- ✅ Production-ready code quality

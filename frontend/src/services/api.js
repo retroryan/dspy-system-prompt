@@ -98,5 +98,95 @@ export const api = {
   async getMetrics() {
     const response = await fetch(`${API_URL}/metrics`);
     return handleResponse(response);
+  },
+
+  // Demo Execution
+  async startDemo(demoType, userId, verbose = true) {
+    const response = await fetch(`${API_URL}/demos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        demo_type: demoType,
+        user_id: userId,
+        verbose
+      })
+    });
+    return handleResponse(response);
+  },
+
+  async getDemo(demoId) {
+    const response = await fetch(`${API_URL}/demos/${demoId}`);
+    return handleResponse(response);
+  },
+
+  async getDemoOutput(demoId, sinceLine = 0) {
+    const response = await fetch(`${API_URL}/demos/${demoId}/output?since_line=${sinceLine}`);
+    return handleResponse(response);
+  },
+
+  async cancelDemo(demoId) {
+    const response = await fetch(`${API_URL}/demos/${demoId}`, {
+      method: 'DELETE'
+    });
+    
+    if (!response.ok && response.status !== 204) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new ApiError(
+        errorData.detail || `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+    
+    return { success: true };
+  },
+
+  async listDemos(userId = null, limit = 50) {
+    const params = new URLSearchParams();
+    if (userId) params.append('user_id', userId);
+    if (limit) params.append('limit', limit.toString());
+    
+    const response = await fetch(`${API_URL}/demos?${params}`);
+    return handleResponse(response);
+  },
+
+  // Configuration Management
+  async getConfig(section) {
+    const response = await fetch(`${API_URL}/config/${section}`);
+    return handleResponse(response);
+  },
+
+  async updateConfig(section, config) {
+    const response = await fetch(`${API_URL}/config/${section}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        section,
+        config
+      })
+    });
+    return handleResponse(response);
+  },
+
+  // System Administration
+  async getSystemStatus() {
+    const response = await fetch(`${API_URL}/system/status`);
+    return handleResponse(response);
+  },
+
+  async getEnhancedMetrics() {
+    const response = await fetch(`${API_URL}/system/metrics`);
+    return handleResponse(response);
+  },
+
+  async performSystemAction(action, parameters = null) {
+    const response = await fetch(`${API_URL}/system/actions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action,
+        parameters
+      })
+    });
+    return handleResponse(response);
   }
 };

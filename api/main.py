@@ -22,7 +22,8 @@ from api.middleware.error_handler import (
     validation_exception_handler,
     general_exception_handler
 )
-from api.routers import health, sessions, queries, tools
+from api.routers import health, sessions, queries, tools, demos
+from api.routers import config as config_router, system as system_router
 from api.core.sessions import session_manager
 
 # Setup logging
@@ -40,7 +41,10 @@ app = FastAPI(
         {"name": "Health", "description": "Health checks and metrics"},
         {"name": "Sessions", "description": "Session management operations"},
         {"name": "Queries", "description": "Query execution within sessions"},
-        {"name": "Tools", "description": "Tool set information and discovery"}
+        {"name": "Tools", "description": "Tool set information and discovery"},
+        {"name": "Demos", "description": "Demo workflow execution and monitoring"},
+        {"name": "Configuration", "description": "System configuration management"},
+        {"name": "System Administration", "description": "Enhanced system metrics and administration"}
     ]
 )
 
@@ -67,6 +71,9 @@ app.include_router(health.router)
 app.include_router(sessions.router)
 app.include_router(queries.router)
 app.include_router(tools.router)
+app.include_router(demos.router)
+app.include_router(config_router.router)
+app.include_router(system_router.router)
 
 # Root endpoint
 @app.get("/", tags=["Root"])
@@ -89,7 +96,11 @@ def root():
             "health": "/health",
             "metrics": "/metrics",
             "sessions": "/sessions",
-            "tool_sets": "/tool-sets"
+            "tool_sets": "/tool-sets",
+            "demos": "/demos",
+            "configuration": "/config",
+            "system_status": "/system/status",
+            "enhanced_metrics": "/system/metrics"
         },
         "quick_start": {
             "1_create_session": "POST /sessions with tool_set and user_id",
@@ -123,8 +134,14 @@ def startup_event():
 def shutdown_event():
     """Clean up on shutdown."""
     import logging
+    from api.core.dependencies import get_app_dependencies
+    
     logger = logging.getLogger(__name__)
     logger.info("Shutting down API server")
+    
+    # Shutdown all dependencies
+    get_app_dependencies().shutdown()
+    
     # Shutdown session manager
     session_manager.shutdown()
 

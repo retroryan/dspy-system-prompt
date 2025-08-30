@@ -1,0 +1,400 @@
+.advanced-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.advanced-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Input Section */
+.input-section {
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+}
+
+.advanced-form {
+  display: flex;
+  gap: 1rem;
+}
+
+.advanced-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+
+.advanced-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.advanced-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.submit-btn {
+  padding: 0.75rem 2rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Visualization Grid */
+.visualization-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.loop-section,
+.tools-section {
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.loop-stats {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stat-label {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.stat-value {
+  font-weight: 600;
+}
+
+/* Loop Visualization */
+.loop-visualization {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.loop-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.loop-step {
+  background: var(--bg-primary);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.loop-step:hover {
+  border-color: var(--primary);
+  transform: translateX(4px);
+}
+
+.loop-step.selected {
+  border-color: var(--primary);
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+
+.loop-step.processing {
+  border-style: dashed;
+  cursor: default;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.step-number {
+  background: var(--primary);
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.step-tool {
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.step-time {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.step-thought {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.step-arrow {
+  text-align: center;
+  color: var(--primary);
+  font-size: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.processing-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Tool Filters */
+.tool-filters {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.filter-btn {
+  padding: 0.375rem 0.75rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  background: var(--hover-bg);
+}
+
+.filter-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+/* Tool Execution Panel */
+.tool-execution-panel {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.tool-card {
+  background: var(--bg-primary);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.tool-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.tool-card.inactive {
+  opacity: 0.5;
+}
+
+.tool-card.executing {
+  border-color: #10b981;
+  animation: pulse 2s infinite;
+}
+
+.tool-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.tool-icon {
+  font-size: 1.5rem;
+}
+
+.tool-status {
+  font-size: 0.75rem;
+}
+
+.tool-status.active {
+  color: #10b981;
+}
+
+.tool-status.inactive {
+  color: #6b7280;
+}
+
+.tool-name {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+
+.tool-stats {
+  display: flex;
+  justify-content: space-between;
+}
+
+.tool-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tool-stat .stat-label {
+  font-size: 0.75rem;
+}
+
+.tool-stat .stat-value {
+  font-size: 0.875rem;
+}
+
+.tool-executing {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #10b981;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0 6px 0 8px;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.executing-pulse {
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+  animation: pulse-dot 1s infinite;
+}
+
+/* Iteration Details */
+.iteration-details {
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+}
+
+.details-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.details-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.detail-item {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: var(--bg-primary);
+  border-radius: 6px;
+}
+
+.detail-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.detail-value {
+  color: var(--text-primary);
+  word-break: break-word;
+}

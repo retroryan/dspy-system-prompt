@@ -1,87 +1,40 @@
 import { useState } from 'react';
-import ChatWindow from './components/ChatWindow';
-import ToolSetSelector from './components/ToolSetSelector';
-import { useSession } from './hooks/useSession';
-import './App.css';
+import Layout from './components/layout/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
+import { NotificationProvider } from './contexts/NotificationContext';
+import NotificationContainer from './components/NotificationContainer';
+import Chatbot from './views/Chatbot';
+import Dashboard from './views/Dashboard';
+import Demos from './views/Demos';
+import AdminSettings from './views/AdminSettings';
+import Advanced from './views/Advanced';
+import About from './views/About';
+import './styles/global.css';
+
+const VIEWS = {
+  chatbot: Chatbot,
+  dashboard: Dashboard,
+  demos: Demos,
+  admin: AdminSettings,
+  advanced: Advanced,
+  about: About
+};
 
 export default function App() {
-  const [inputValue, setInputValue] = useState('');
-  const {
-    sessionId,
-    messages,
-    isLoading,
-    error,
-    toolSet,
-    queryCount,
-    userId,
-    sendQuery,
-    resetSession,
-    changeToolSet
-  } = useSession();
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (inputValue.trim() && !isLoading) {
-      sendQuery(inputValue);
-      setInputValue('');
-    }
-  };
-
+  const [currentView, setCurrentView] = useState('chatbot');
+  
+  const CurrentViewComponent = VIEWS[currentView] || Chatbot;
+  
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>DSPy Agentic Loop Demo</h1>
-        <div className="session-info">
-          <span className="user-id">User: {userId}</span>
-          {sessionId && (
-            <span className="session-id">Session: {sessionId.substr(0, 8)}...</span>
-          )}
-          <span className="query-count">Queries: {queryCount}</span>
-        </div>
-        <ToolSetSelector 
-          currentToolSet={toolSet} 
-          onToolSetChange={changeToolSet}
-          disabled={isLoading}
-        />
-      </header>
-
-      <main className="app-main">
-        <ChatWindow messages={messages} isLoading={isLoading} />
-        
-        {error && (
-          <div className="error-message">
-            <span>Error: {error}</span>
-            <button onClick={resetSession}>Reset Session</button>
-          </div>
-        )}
-
-        <form className="input-form" onSubmit={handleSubmit}>
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Type your message..."
-            disabled={isLoading}
-            className="message-input"
-          />
-          <button 
-            type="submit" 
-            disabled={isLoading || !inputValue.trim()}
-            className="send-button"
-          >
-            Send
-          </button>
-        </form>
-
-        {messages.length > 0 && (
-          <button 
-            onClick={resetSession}
-            className="reset-button"
-          >
-            New Session
-          </button>
-        )}
-      </main>
-    </div>
+    <ErrorBoundary>
+      <NotificationProvider>
+        <Layout currentView={currentView} onViewChange={setCurrentView}>
+          <ErrorBoundary key={currentView}>
+            <CurrentViewComponent />
+          </ErrorBoundary>
+        </Layout>
+        <NotificationContainer />
+      </NotificationProvider>
+    </ErrorBoundary>
   );
 }
