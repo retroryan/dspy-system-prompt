@@ -21,13 +21,14 @@
 .thinking-avatar {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   animation: pulse 2s ease-in-out infinite;
+  box-shadow: 0 2px 8px rgba(30, 41, 59, 0.15);
 }
 
 @keyframes pulse {
@@ -54,7 +55,7 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px 16px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .thinking-text {
@@ -72,7 +73,7 @@
 .thinking-dot {
   width: 8px;
   height: 8px;
-  background: var(--primary);
+  background: var(--accent);
   border-radius: 50%;
   animation: bounce 1.4s ease-in-out infinite;
 }
@@ -100,14 +101,4 @@
   }
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .thinking-avatar {
-    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-  }
-  
-  .thinking-content {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-}
+/* Dark mode support - already handled by CSS variables */

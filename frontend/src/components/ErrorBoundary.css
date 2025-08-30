@@ -5,37 +5,37 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
   padding: 2rem;
 }
 
 .error-container {
-  background: white;
+  background: var(--surface);
   border-radius: 12px;
   padding: 3rem;
   max-width: 600px;
   width: 100%;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-xl);
   text-align: center;
 }
 
 .error-title {
   font-size: 2rem;
   font-weight: 700;
-  color: #1a202c;
+  color: var(--text-primary);
   margin-bottom: 1rem;
 }
 
 .error-message {
   font-size: 1.125rem;
-  color: #4a5568;
+  color: var(--text-secondary);
   margin-bottom: 2rem;
   line-height: 1.6;
 }
 
 .error-details {
-  background: #f7fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--background);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 2rem;
@@ -45,20 +45,20 @@
 .error-details summary {
   cursor: pointer;
   font-weight: 600;
-  color: #2d3748;
+  color: var(--text-primary);
   padding: 0.5rem;
   user-select: none;
 }
 
 .error-details summary:hover {
-  color: #4a5568;
+  color: var(--accent);
 }
 
 .error-stack {
   margin-top: 1rem;
   padding: 1rem;
-  background: #2d3748;
-  color: #f7fafc;
+  background: var(--primary-dark);
+  color: var(--background);
   border-radius: 4px;
   font-family: 'Fira Code', monospace;
   font-size: 0.875rem;
@@ -84,22 +84,24 @@
 }
 
 .error-actions .btn-primary {
-  background: #667eea;
+  background: linear-gradient(135deg, var(--accent), var(--primary));
   color: white;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
 }
 
 .error-actions .btn-primary:hover {
-  background: #5a67d8;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
   transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
 }
 
 .error-actions .btn-secondary {
-  background: #e2e8f0;
-  color: #4a5568;
+  background: var(--border);
+  color: var(--text-secondary);
 }
 
 .error-actions .btn-secondary:hover {
-  background: #cbd5e0;
+  background: var(--text-secondary);
+  color: var(--surface);
   transform: translateY(-1px);
 }

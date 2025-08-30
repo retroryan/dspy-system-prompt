@@ -19,8 +19,9 @@
 }
 
 .stat-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-md);
   transform: translateY(-2px);
+  border-color: var(--accent);
 }
 
 .stat-label {
@@ -46,13 +47,13 @@
 }
 
 .stat-change.positive {
-  background: #d1fae5;
-  color: #065f46;
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
 }
 
 .stat-change.negative {
-  background: #fee2e2;
-  color: #991b1b;
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
 }
 
 /* Recent Activity */
@@ -77,7 +78,7 @@
 }
 
 .view-all-btn {
-  color: var(--primary);
+  color: var(--accent);
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 500;
@@ -85,6 +86,7 @@
   border: none;
   cursor: pointer;
   font-family: inherit;
+  transition: color 0.2s;
 }
 
 .view-all-btn:hover {
@@ -121,18 +123,18 @@
 }
 
 .activity-icon.demo {
-  background: #dbeafe;
-  color: var(--primary);
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--accent);
 }
 
 .activity-icon.tool {
-  background: #f3e8ff;
-  color: #8b5cf6;
+  background: rgba(30, 41, 59, 0.1);
+  color: var(--primary);
 }
 
 .activity-icon.system {
-  background: #fef3c7;
-  color: #d97706;
+  background: rgba(251, 191, 36, 0.1);
+  color: var(--warning);
 }
 
 .activity-content {
@@ -176,9 +178,10 @@
 }
 
 .action-btn:hover {
-  border-color: var(--primary);
-  background: #f8fafc;
+  border-color: var(--accent);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.02), rgba(30, 41, 59, 0.02));
   transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
 }
 
 .action-icon {

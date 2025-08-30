@@ -18,7 +18,7 @@
 .logo-icon {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, var(--primary), #8b5cf6);
+  background: linear-gradient(135deg, var(--primary), var(--accent));
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -26,6 +26,7 @@
   color: white;
   font-weight: bold;
   font-size: 20px;
+  box-shadow: 0 4px 12px rgba(30, 41, 59, 0.15);
 }
 
 .logo-text {
@@ -62,14 +63,16 @@
 }
 
 .nav-link:hover {
-  background: #f1f5f9;
-  color: var(--primary);
+  background: rgba(30, 41, 59, 0.04);
+  color: var(--accent);
 }
 
 .nav-link.active {
-  background: #eff6ff;
-  color: var(--primary);
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.02));
+  color: var(--accent);
   font-weight: 500;
+  border-left: 3px solid var(--accent);
+  padding-left: calc(1rem - 3px);
 }
 
 .nav-icon {

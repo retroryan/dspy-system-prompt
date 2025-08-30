@@ -40,11 +40,13 @@ button {
 
 /* Links */
 a {
-  color: var(--primary);
+  color: var(--accent);
   text-decoration: none;
+  transition: color 0.2s;
 }
 
 a:hover {
+  color: var(--primary);
   text-decoration: underline;
 }
 
