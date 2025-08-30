@@ -1,4 +1,4 @@
-# Real-Time Agent Progress Streaming Proposal
+# Real-Time Agent Progress Streaming - REVERTED
 
 ## Complete Cut-Over Requirements
 
@@ -128,7 +128,23 @@ Add a simple endpoint that returns the current trajectory steps for an active qu
 
 This is NOT complex for a demo-quality implementation. The core mechanism leverages existing data structures and simply exposes them during execution rather than only at completion.
 
-## Implementation Plan
+## Implementation Status: ❌ REVERTED
+
+The progress tracking implementation was reverted due to complexity and issues with the API server hanging. The system has been restored to the simpler, working version with just the thinking indicator.
+
+### Why Reverted
+- **API Server Hanging**: The progress tracking implementation caused the API server to hang
+- **Too Complex**: The implementation added unnecessary complexity for a demo
+- **Broken Thinking Indicator**: The simple thinking indicator stopped working
+- **Threading Issues**: Complex locking and threading made the system fragile
+
+### Current State
+- **Simple Thinking Indicator**: Shows "AI agent thinking..." when processing
+- **Clean Architecture**: Removed all progress tracking code
+- **Working API**: Server starts and responds correctly
+- **No Deadlocks**: Simple locking without complex progress callbacks
+
+## Original Implementation Plan
 
 ### Phase 1: Backend Foundation
 **Goal**: Modify session to store and expose trajectory during execution

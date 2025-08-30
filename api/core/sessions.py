@@ -7,11 +7,11 @@ Handles creation, storage, retrieval, and lifecycle of agent sessions.
 import threading
 import time
 from datetime import datetime, timedelta
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional, List
 import logging
 
 from agentic_loop.session import AgentSession
-from api.core.models import SessionResponse, SessionConfig, ProgressResponse, ProgressStep
+from api.core.models import SessionResponse, SessionConfig
 from api.utils.config import config
 from api.middleware.error_handler import (
     SessionNotFoundException,
@@ -40,11 +40,6 @@ class SessionInfo:
         self.last_accessed = datetime.now()
         self.status = "active"
         self.lock = threading.Lock()
-        # Progress tracking
-        self.progress_steps: List[ProgressStep] = []
-        self.is_processing = False
-        self.current_query: Optional[str] = None
-        self.query_start_time: Optional[datetime] = None
     
     def touch(self):
         """Update last accessed time."""
@@ -65,49 +60,6 @@ class SessionInfo:
             status=self.status,
             conversation_turns=self.agent_session.conversation_turn
         )
-    
-    def start_processing(self, query: str):
-        """Mark session as processing a query."""
-        with self.lock:
-            self.is_processing = True
-            self.current_query = query
-            self.query_start_time = datetime.now()
-            self.progress_steps = []
-    
-    def add_progress_step(self, thought: str, tool_name: Optional[str] = None, 
-                         tool_args: Optional[Dict[str, Any]] = None, 
-                         observation: Optional[str] = None):
-        """Add a progress step thread-safely."""
-        with self.lock:
-            step = ProgressStep(
-                thought=thought,
-                tool_name=tool_name,
-                tool_args=tool_args,
-                observation=observation,
-                timestamp=datetime.now(),
-                step_number=len(self.progress_steps) + 1
-            )
-            self.progress_steps.append(step)
-    
-    def finish_processing(self):
-        """Mark query processing as complete."""
-        with self.lock:
-            self.is_processing = False
-    
-    def get_progress(self) -> ProgressResponse:
-        """Get current progress thread-safely."""
-        with self.lock:
-            elapsed = 0.0
-            if self.query_start_time:
-                elapsed = (datetime.now() - self.query_start_time).total_seconds()
-            
-            return ProgressResponse(
-                session_id=self.session_id,
-                is_processing=self.is_processing,
-                steps=self.progress_steps.copy(),
-                elapsed_seconds=elapsed,
-                current_query=self.current_query
-            )
 
 
 class SessionManager:

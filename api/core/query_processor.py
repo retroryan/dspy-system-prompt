@@ -82,9 +82,6 @@ class QueryProcessor:
             raise Exception("Another query is already in progress for this session")
         
         try:
-            # Mark session as processing
-            session_info.start_processing(query)
-            
             # Execute with timeout
             with timeout_context(timeout_seconds) as timed_out:
                 # Create a thread to run the query
@@ -94,11 +91,10 @@ class QueryProcessor:
                 def run_query():
                     nonlocal result, error
                     try:
-                        # Execute query through agent session with progress callback
+                        # Execute query through agent session
                         result = session_info.agent_session.query(
                             text=query,
-                            max_iterations=max_iterations,
-                            progress_callback=session_info.add_progress_step
+                            max_iterations=max_iterations
                         )
                     except Exception as e:
                         error = e
@@ -113,20 +109,14 @@ class QueryProcessor:
                 # Check if timed out
                 if timed_out.is_set() or query_thread.is_alive():
                     logger.error(f"Query timed out after {timeout_seconds} seconds")
-                    session_info.finish_processing()
                     raise QueryTimeoutException(timeout_seconds)
                 
                 # Check for errors
                 if error:
-                    session_info.finish_processing()
                     raise error
                 
                 if not result:
-                    session_info.finish_processing()
                     raise Exception("Query execution failed to produce a result")
-                
-                # Mark processing as complete
-                session_info.finish_processing()
                 
                 # Update session
                 session_info.touch()

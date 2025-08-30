@@ -19,7 +19,8 @@ describe('Navigation', () => {
 
   it('should start with Chatbot view as default', () => {
     cy.get('.nav-link').eq(0).should('have.class', 'active');
-    cy.get('.page-title').should('contain', 'Chatbot');
+    // Chatbot view doesn't have a page-title, check for welcome message instead
+    cy.get('.welcome-message').should('exist');
   });
 
   it('should switch views when clicking navigation items', () => {
@@ -51,7 +52,8 @@ describe('Navigation', () => {
     // Click back to Chatbot
     cy.get('.nav-link').eq(0).click();
     cy.get('.nav-link').eq(0).should('have.class', 'active');
-    cy.get('.page-title').should('contain', 'Chatbot');
+    // Chatbot view should show welcome or chat interface
+    cy.get('.chat-interface').should('exist');
   });
 
   it('should maintain sidebar visibility across all routes', () => {
