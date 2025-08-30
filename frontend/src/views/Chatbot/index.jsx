@@ -3,7 +3,6 @@ import ChatContainer from './ChatContainer';
 import MessageInput from './MessageInput';
 import SessionPanel from './SessionPanel';
 import { useSession } from '../../hooks/useSession';
-import { useProgress } from '../../hooks/useProgress';
 import { useNotification } from '../../contexts/NotificationContext';
 import './styles.css';
 
@@ -22,9 +21,6 @@ export default function Chatbot() {
   } = useSession();
   
   const { showInfo, showSuccess, showError } = useNotification();
-  
-  // Poll for progress while loading
-  const { progress, clearProgress } = useProgress(sessionId, isLoading);
   
   const handleSendMessage = (message) => {
     sendQuery(message);
