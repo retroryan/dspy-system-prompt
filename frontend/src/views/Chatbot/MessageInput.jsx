@@ -7,7 +7,7 @@ const QUICK_ACTIONS = [
   { label: '🔧 Tools', command: '/tools' }
 ];
 
-export default function MessageInput({ onSendMessage, isLoading, onCommand }) {
+export default function MessageInput({ onSendMessage, isLoading, onCommand, toolSet, onToolSetChange }) {
   const [inputValue, setInputValue] = useState('');
   const textareaRef = useRef(null);
   
@@ -49,25 +49,41 @@ export default function MessageInput({ onSendMessage, isLoading, onCommand }) {
   return (
     <div className="chat-input-container">
       <div className="input-actions">
-        {QUICK_ACTIONS.map((action, index) => (
-          <button
-            key={index}
-            className="input-chip"
-            onClick={() => insertCommand(action.command)}
+        <div className="tool-selector">
+          <label htmlFor="tool-set-select">Tools:</label>
+          <select 
+            id="tool-set-select"
+            className="tool-set-select"
+            value={toolSet} 
+            onChange={(e) => onToolSetChange && onToolSetChange(e.target.value)}
             disabled={isLoading}
           >
-            {action.label}
-          </button>
-        ))}
+            <option value="ecommerce">🛒 E-commerce</option>
+            <option value="agriculture">🌾 Agriculture</option>
+            <option value="events">📅 Events</option>
+          </select>
+        </div>
+        <div className="action-chips">
+          {QUICK_ACTIONS.map((action, index) => (
+            <button
+              key={index}
+              className="input-chip"
+              onClick={() => insertCommand(action.command)}
+              disabled={isLoading}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
       </div>
       <form className="chat-input-wrapper" onSubmit={handleSubmit}>
         <textarea
           ref={textareaRef}
-          className="chat-input"
+          className={`chat-input ${isLoading ? 'disabled' : ''}`}
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder="Ask me anything..."
+          placeholder={isLoading ? "AI is thinking..." : "Ask me anything..."}
           disabled={isLoading}
           rows="1"
         />

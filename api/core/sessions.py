@@ -7,16 +7,15 @@ Handles creation, storage, retrieval, and lifecycle of agent sessions.
 import threading
 import time
 from datetime import datetime, timedelta
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 import logging
 
 from agentic_loop.session import AgentSession
-from api.core.models import SessionResponse, SessionConfig
+from api.core.models import SessionResponse, SessionConfig, ProgressResponse, ProgressStep
 from api.utils.config import config
 from api.middleware.error_handler import (
     SessionNotFoundException,
     SessionExpiredException,
-    MaxSessionsExceededException,
     ToolSetNotFoundException
 )
 
@@ -41,6 +40,11 @@ class SessionInfo:
         self.last_accessed = datetime.now()
         self.status = "active"
         self.lock = threading.Lock()
+        # Progress tracking
+        self.progress_steps: List[ProgressStep] = []
+        self.is_processing = False
+        self.current_query: Optional[str] = None
+        self.query_start_time: Optional[datetime] = None
     
     def touch(self):
         """Update last accessed time."""
@@ -61,6 +65,49 @@ class SessionInfo:
             status=self.status,
             conversation_turns=self.agent_session.conversation_turn
         )
+    
+    def start_processing(self, query: str):
+        """Mark session as processing a query."""
+        with self.lock:
+            self.is_processing = True
+            self.current_query = query
+            self.query_start_time = datetime.now()
+            self.progress_steps = []
+    
+    def add_progress_step(self, thought: str, tool_name: Optional[str] = None, 
+                         tool_args: Optional[Dict[str, Any]] = None, 
+                         observation: Optional[str] = None):
+        """Add a progress step thread-safely."""
+        with self.lock:
+            step = ProgressStep(
+                thought=thought,
+                tool_name=tool_name,
+                tool_args=tool_args,
+                observation=observation,
+                timestamp=datetime.now(),
+                step_number=len(self.progress_steps) + 1
+            )
+            self.progress_steps.append(step)
+    
+    def finish_processing(self):
+        """Mark query processing as complete."""
+        with self.lock:
+            self.is_processing = False
+    
+    def get_progress(self) -> ProgressResponse:
+        """Get current progress thread-safely."""
+        with self.lock:
+            elapsed = 0.0
+            if self.query_start_time:
+                elapsed = (datetime.now() - self.query_start_time).total_seconds()
+            
+            return ProgressResponse(
+                session_id=self.session_id,
+                is_processing=self.is_processing,
+                steps=self.progress_steps.copy(),
+                elapsed_seconds=elapsed,
+                current_query=self.current_query
+            )
 
 
 class SessionManager:
@@ -85,7 +132,10 @@ class SessionManager:
         session_config: Optional[SessionConfig] = None
     ) -> SessionInfo:
         """
-        Create a new session.
+        Create a new session with automatic cleanup.
+        
+        When a user reaches the maximum session limit (50), the oldest
+        50 sessions are automatically deleted to make room for new sessions.
         
         Args:
             session_id: Unique session identifier
@@ -97,7 +147,6 @@ class SessionManager:
             Created session information
             
         Raises:
-            MaxSessionsExceededException: If user exceeds max sessions
             ToolSetNotFoundException: If tool set is invalid
         """
         # Validate tool set
@@ -106,13 +155,28 @@ class SessionManager:
             raise ToolSetNotFoundException(tool_set)
         
         with self.lock:
-            # Check user session limit
+            # Check user session limit - exclude expired sessions
             user_sessions = [
                 s for s in self.sessions.values()
-                if s.user_id == user_id and s.status == "active"
+                if s.user_id == user_id 
+                and s.status == "active" 
+                and not s.is_expired(config.session_ttl_minutes)
             ]
+            
+            # Auto-cleanup: Delete oldest sessions when reaching limit
             if len(user_sessions) >= config.max_sessions_per_user:
-                raise MaxSessionsExceededException(user_id, config.max_sessions_per_user)
+                # Sort sessions by creation time (oldest first)
+                sorted_sessions = sorted(user_sessions, key=lambda s: s.created_at)
+                
+                # Delete the oldest 50 sessions (or all if less than 50)
+                sessions_to_delete = sorted_sessions[:min(50, len(sorted_sessions))]
+                
+                for session in sessions_to_delete:
+                    session.status = "terminated"
+                    del self.sessions[session.session_id]
+                    logger.info(f"Auto-cleanup: Deleted old session {session.session_id} for user {user_id}")
+                
+                logger.info(f"Auto-cleanup: Deleted {len(sessions_to_delete)} old sessions for user {user_id}")
             
             # Create agent session with configuration
             agent_config = None
@@ -230,13 +294,18 @@ class SessionManager:
         with self.lock:
             return [
                 s for s in self.sessions.values()
-                if s.user_id == user_id and s.status == "active"
+                if s.user_id == user_id 
+                and s.status == "active"
+                and not s.is_expired(config.session_ttl_minutes)
             ]
     
     def get_active_session_count(self) -> int:
         """Get count of active sessions."""
         with self.lock:
-            return len([s for s in self.sessions.values() if s.status == "active"])
+            return len([
+                s for s in self.sessions.values() 
+                if s.status == "active" and not s.is_expired(config.session_ttl_minutes)
+            ])
     
     def cleanup_expired_sessions(self):
         """Remove expired sessions."""

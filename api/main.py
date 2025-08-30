@@ -14,7 +14,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException
 
 from api.utils.config import config
-from api.middleware.logging import LoggingMiddleware, setup_logging
+from api.middleware.logging import setup_logging
 from api.middleware.error_handler import (
     APIException,
     api_exception_handler,
@@ -57,8 +57,7 @@ app.add_middleware(
     allow_headers=config.cors_allow_headers,
 )
 
-# Add logging middleware
-app.add_middleware(LoggingMiddleware)
+# Logging middleware removed - using standard uvicorn logging for simplicity
 
 # Register exception handlers
 app.add_exception_handler(APIException, api_exception_handler)

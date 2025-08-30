@@ -1,10 +1,18 @@
-import React from 'react';
+import { useEffect, useRef } from 'react';
 import Message from './Message';
 import WelcomeScreen from './WelcomeScreen';
-import LoadingIndicator from '../../components/LoadingIndicator';
+import ThinkingIndicator from '../../components/ThinkingIndicator';
 
 export default function ChatContainer({ messages, isLoading, onSuggestedPrompt }) {
   const hasMessages = messages && messages.length > 0;
+  const messagesEndRef = useRef(null);
+  
+  // Auto-scroll to bottom when new messages or loading state changes
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isLoading]);
   
   return (
     <div className="chat-container">
@@ -16,7 +24,8 @@ export default function ChatContainer({ messages, isLoading, onSuggestedPrompt }
             {messages.map((message, index) => (
               <Message key={index} message={message} />
             ))}
-            {isLoading && <LoadingIndicator />}
+            {isLoading && <ThinkingIndicator />}
+            <div ref={messagesEndRef} />
           </>
         )}
       </div>

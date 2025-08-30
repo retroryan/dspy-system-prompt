@@ -19,6 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Claude must adhere to these principles:
 
 - **Synchronous-Only**: All code is synchronous for clarity and simplicity
+- **API Server is Fully Sync**: The API server and frontend must be completely synchronous
 - **Always use `dspy.ChainOfThought`**: For improved reasoning in the agentic loop
 - **Type Safety**: Pydantic models provide clear data structures
 - **Minimal Dependencies**: Just DSPy, Pydantic, and python-dotenv
@@ -29,6 +30,31 @@ Claude must adhere to these principles:
 - **Preserve Tool Integration System**: The current tool system with `BaseTool`, `ToolArgument`, and the registry pattern must be preserved. It provides type safety, validation, test cases, and external execution control
 
 **IMPORTANT: If there is a question about something or a request requires a complex hack, always ask the user before implementing. Maintain simplicity over clever solutions.**
+
+## Complete Cut-Over Requirements
+
+**CRITICAL: ALL CHANGES MUST FOLLOW THESE REQUIREMENTS**
+
+When making any changes to the codebase:
+
+* **ALWAYS FIX THE CORE ISSUE!**
+* **COMPLETE CHANGE**: All occurrences must be changed in a single, atomic update
+* **CLEAN IMPLEMENTATION**: Simple, direct replacements only
+* **NO MIGRATION PHASES**: Do not create temporary compatibility periods
+* **NO PARTIAL UPDATES**: Change everything or change nothing
+* **NO COMPATIBILITY LAYERS**: Do not maintain old and new paths simultaneously
+* **NO BACKUPS OF OLD CODE**: Do not comment out old code "just in case"
+* **NO CODE DUPLICATION**: Do not duplicate functions to handle both patterns
+* **NO WRAPPER FUNCTIONS**: Direct replacements only, no abstraction layers
+* **DO NOT CALL FUNCTIONS ENHANCED or IMPROVED**: Do not create separate ImprovedPropertyIndex - update the actual PropertyIndex
+* **ALWAYS USE PYDANTIC**: Use Pydantic models for all data structures
+* **USE MODULES AND CLEAN CODE!**
+* **Never name things after phases or steps**: No test_phase_2_bronze_layer.py etc.
+* **if hasattr should never be used**: And never use isinstance
+* **Never cast variables**: No variable casting, casting variable names, or adding variable aliases
+* **If you are using a union type something is wrong**: Go back and evaluate the core issue
+* **If it doesn't work don't hack and mock**: Fix the core issue
+* **If there are questions please ask**: Update with the new API server and frontend
 
 ## Project Overview
 

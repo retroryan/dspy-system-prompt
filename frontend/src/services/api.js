@@ -65,6 +65,11 @@ export const api = {
     return handleResponse(response);
   },
 
+  async getProgress(sessionId) {
+    const response = await fetch(`${API_URL}/sessions/${sessionId}/progress`);
+    return handleResponse(response);
+  },
+
   // Query Execution
   async executeQuery(sessionId, query, maxIterations = 5) {
     const response = await fetch(`${API_URL}/sessions/${sessionId}/query`, {

@@ -53,7 +53,8 @@ def run_react_loop(
     context_prompt: str,
     max_iterations: int = 5,
     session: Optional['AgentSession'] = None,
-    verbose: bool = False
+    verbose: bool = False,
+    progress_callback: Optional[callable] = None
 ) -> MessageList:
     """
     Run the React agent loop with conversation context using MessageList.
@@ -116,6 +117,13 @@ def run_react_loop(
             if traj.tool_use:
                 tool_use = traj.tool_use
         
+        # Report progress if callback provided
+        if progress_callback and last_trajectory:
+            thought = last_trajectory.thought if last_trajectory.thought else ""
+            tool_name = tool_use.tool_name if tool_use else None
+            tool_args = tool_use.tool_args if tool_use else None
+            progress_callback(thought, tool_name, tool_args, None)
+        
         # Demo logging for React iteration
         if verbose:
             print(f"react loop call {iteration_num} - log of results:")
@@ -169,6 +177,10 @@ def run_react_loop(
                     result=result,
                     execution_time_ms=execution_time
                 )
+                
+                # Report observation if callback provided
+                if progress_callback:
+                    progress_callback(None, None, None, str(result))
                 
             except Exception as e:
                 # Handle tool execution errors

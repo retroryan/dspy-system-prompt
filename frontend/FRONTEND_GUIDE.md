@@ -344,15 +344,87 @@ cypress/
 
 ### Running Tests
 
-```bash
-# Interactive mode
-npm test
+#### Quick Start - Headless Testing
 
-# Headless mode
+To run tests without opening a browser window (headless mode), perfect for CI/CD or quick validation:
+
+```bash
+# Run all tests headless
 npm run test:headless
 
-# Specific test
+# Run specific test file headless
 npm run test:headless -- --spec cypress/e2e/demos.cy.js
+
+# Run tests in a specific browser headless
+npm run test:headless -- --browser chrome
+npm run test:headless -- --browser firefox
+npm run test:headless -- --browser edge
+```
+
+#### Interactive Testing
+
+For development and debugging with visual feedback:
+
+```bash
+# Open Cypress Test Runner (interactive)
+npm test
+
+# This opens a GUI where you can:
+# - Select and run individual tests
+# - See tests execute in real-time
+# - Debug failures with DevTools
+# - Time-travel through test steps
+```
+
+#### Prerequisites for Headless Tests
+
+1. **Ensure backend is running**:
+   ```bash
+   # In a separate terminal
+   poetry run uvicorn api.main:app --host localhost --port 8000
+   ```
+
+2. **Ensure frontend dev server is running**:
+   ```bash
+   # In another terminal
+   npm run dev
+   ```
+
+3. **Run headless tests**:
+   ```bash
+   npm run test:headless
+   ```
+
+#### Common Headless Test Commands
+
+```bash
+# Run all e2e tests headless with video recording
+npm run test:headless -- --config video=true
+
+# Run tests and generate HTML report
+npm run test:headless -- --reporter mochawesome
+
+# Run tests with specific viewport
+npm run test:headless -- --config viewportWidth=1280,viewportHeight=720
+
+# Run tests in parallel (if configured)
+npm run test:headless -- --parallel
+
+# Run tests with debug output
+DEBUG=cypress:* npm run test:headless
+```
+
+#### CI/CD Integration
+
+For continuous integration environments:
+
+```bash
+# Install dependencies and run tests
+npm ci
+npm run test:headless -- --record --key <your-cypress-dashboard-key>
+
+# Or as a single command
+npm ci && npm run test:headless
 ```
 
 ## Deployment Considerations

@@ -3,6 +3,7 @@ import ChatContainer from './ChatContainer';
 import MessageInput from './MessageInput';
 import SessionPanel from './SessionPanel';
 import { useSession } from '../../hooks/useSession';
+import { useProgress } from '../../hooks/useProgress';
 import { useNotification } from '../../contexts/NotificationContext';
 import './styles.css';
 
@@ -21,6 +22,9 @@ export default function Chatbot() {
   } = useSession();
   
   const { showInfo, showSuccess, showError } = useNotification();
+  
+  // Poll for progress while loading
+  const { progress, clearProgress } = useProgress(sessionId, isLoading);
   
   const handleSendMessage = (message) => {
     sendQuery(message);
@@ -60,11 +64,36 @@ export default function Chatbot() {
     }
   }, [messages, sessionId, toolSet, resetSession, showSuccess, showInfo, showError]);
   
+  const handleToolSetChange = useCallback(async (newToolSet) => {
+    try {
+      await changeToolSet(newToolSet);
+      const toolSetNames = {
+        ecommerce: 'E-commerce',
+        agriculture: 'Agriculture',
+        events: 'Events'
+      };
+      showSuccess(`Switched to ${toolSetNames[newToolSet]} tools`);
+    } catch (err) {
+      showError('Failed to change tool set');
+    }
+  }, [changeToolSet, showSuccess, showError]);
+
   const handleQuickAction = (action) => {
+    // Check tool set and show warning if incorrect
+    if (action === 'agriculture' || action === 'weather' || action === 'historical') {
+      if (toolSet !== 'agriculture') {
+        showInfo('Tip: For best results with agriculture and weather queries, switch to Agriculture tools using the dropdown below.');
+      }
+    } else if (action === 'search') {
+      if (toolSet !== 'ecommerce') {
+        showInfo('Tip: For best results with product searches, switch to E-commerce tools using the dropdown below.');
+      }
+    }
+    
     const actionPrompts = {
-      demo: 'Run the e-commerce demo',
-      test: 'Run all test cases',
-      weather: 'Get current weather',
+      agriculture: 'What crops should I plant this season in Fresno, California?',
+      weather: 'What is the current weather in Fresno, California?',
+      historical: 'Compare the current weather in Fresno, California to the weather from the same date last year. Based on the historical weather patterns and temperature trends, provide specific recommendations for when to plant crops this season. Include analysis of temperature changes, precipitation patterns, and any notable weather events that might affect planting decisions.',
       search: 'Search for products'
     };
     
@@ -101,6 +130,8 @@ export default function Chatbot() {
               onSendMessage={handleSendMessage}
               isLoading={isLoading}
               onCommand={handleCommand}
+              toolSet={toolSet}
+              onToolSetChange={handleToolSetChange}
             />
           </div>
         </div>

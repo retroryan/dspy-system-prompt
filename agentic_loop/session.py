@@ -129,7 +129,7 @@ class AgentSession:
         
         logger.debug(f"Initialized AgentSession with {tool_set_name} tools for user {user_id}")
     
-    def query(self, text: str, max_iterations: int = 5) -> SessionResult:
+    def query(self, text: str, max_iterations: int = 5, progress_callback: Optional[callable] = None) -> SessionResult:
         """
         Process a query with automatic context management using MessageList.
         
@@ -170,7 +170,8 @@ class AgentSession:
             messages=messages,
             user_query=text,
             context_prompt=context_prompt,
-            max_iterations=max_iterations
+            max_iterations=max_iterations,
+            progress_callback=progress_callback
         )
         
         # Extract final answer with context
@@ -212,7 +213,8 @@ class AgentSession:
         messages: MessageList,
         user_query: str,
         context_prompt: str,
-        max_iterations: int
+        max_iterations: int,
+        progress_callback: Optional[callable] = None
     ) -> MessageList:
         """
         Run the React agent loop with context using MessageList.
@@ -232,7 +234,8 @@ class AgentSession:
             context_prompt=context_prompt,
             max_iterations=max_iterations,
             session=self,  # Pass the entire session object
-            verbose=self.verbose
+            verbose=self.verbose,
+            progress_callback=progress_callback
         )
         
         return messages

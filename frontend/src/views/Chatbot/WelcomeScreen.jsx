@@ -13,8 +13,8 @@ const SUGGESTED_PROMPTS = [
   },
   {
     icon: '🌾',
-    text: 'Get agricultural recommendations',
-    prompt: 'What crops should I plant this season?'
+    text: 'Agricultural recommendations for Fresno',
+    prompt: 'What crops should I plant this season in Fresno, California?'
   },
   {
     icon: '📦',

@@ -12,7 +12,8 @@ from fastapi import APIRouter, HTTPException, status
 from api.core.models import (
     SessionCreateRequest,
     SessionResponse,
-    ErrorResponse
+    ErrorResponse,
+    ProgressResponse
 )
 from api.core.sessions import session_manager
 from api.middleware.error_handler import (
@@ -173,4 +174,37 @@ def get_user_sessions(user_id: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get user sessions: {str(e)}"
+        )
+
+
+@router.get("/{session_id}/progress", response_model=ProgressResponse)
+def get_session_progress(session_id: str):
+    """
+    Get current query execution progress for a session.
+    
+    Returns the current trajectory steps for an actively processing query.
+    This endpoint is designed for polling to show real-time agent progress.
+    
+    Args:
+        session_id: Session identifier
+        
+    Returns:
+        Progress information including steps completed so far
+        
+    Raises:
+        404: Session not found
+        410: Session has expired
+    """
+    try:
+        session_info = session_manager.get_session(session_id)
+        return session_info.get_progress()
+    except SessionNotFoundException as e:
+        raise e
+    except SessionExpiredException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Failed to get progress for session {session_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get session progress: {str(e)}"
         )

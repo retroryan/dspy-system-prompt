@@ -28,8 +28,8 @@ class APIConfig(BaseModel):
         description="Session timeout in minutes"
     )
     max_sessions_per_user: int = Field(
-        default=10,
-        description="Maximum concurrent sessions per user"
+        default=50,
+        description="Maximum concurrent sessions per user before auto-cleanup"
     )
     cleanup_interval_seconds: int = Field(
         default=60,
@@ -42,7 +42,7 @@ class APIConfig(BaseModel):
         description="Maximum query execution time"
     )
     default_max_iterations: int = Field(
-        default=5,
+        default=10,
         description="Default max iterations for React loop"
     )
     
@@ -95,10 +95,10 @@ class APIConfig(BaseModel):
             api_port=int(os.getenv("API_PORT", "8000")),
             api_host=os.getenv("API_HOST", "0.0.0.0"),
             session_ttl_minutes=int(os.getenv("SESSION_TTL_MINUTES", "30")),
-            max_sessions_per_user=int(os.getenv("MAX_SESSIONS_PER_USER", "10")),
+            max_sessions_per_user=int(os.getenv("MAX_SESSIONS_PER_USER", "50")),
             cleanup_interval_seconds=int(os.getenv("CLEANUP_INTERVAL_SECONDS", "60")),
             query_timeout_seconds=int(os.getenv("QUERY_TIMEOUT_SECONDS", "60")),
-            default_max_iterations=int(os.getenv("DEFAULT_MAX_ITERATIONS", "5")),
+            default_max_iterations=int(os.getenv("DEFAULT_MAX_ITERATIONS", "10")),
             debug_mode=os.getenv("DEBUG_MODE", "false").lower() == "true",
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
             api_version=os.getenv("API_VERSION", "1.0.0"),

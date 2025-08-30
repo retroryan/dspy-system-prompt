@@ -134,7 +134,7 @@ def create_error_response(
     )
 
 
-async def api_exception_handler(request: Request, exc: APIException) -> JSONResponse:
+def api_exception_handler(request: Request, exc: APIException) -> JSONResponse:
     """Handle API exceptions."""
     logger.error(f"API Exception: {exc.code} - {exc.message}")
     return create_error_response(
@@ -145,7 +145,7 @@ async def api_exception_handler(request: Request, exc: APIException) -> JSONResp
     )
 
 
-async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     """Handle HTTP exceptions."""
     logger.error(f"HTTP Exception: {exc.status_code} - {exc.detail}")
     return create_error_response(
@@ -156,7 +156,7 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     )
 
 
-async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Handle validation exceptions."""
     logger.error(f"Validation Error: {exc.errors()}")
     return create_error_response(
@@ -167,7 +167,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
-async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle general exceptions."""
     logger.error(f"Unhandled Exception: {str(exc)}\n{traceback.format_exc()}")
     return create_error_response(

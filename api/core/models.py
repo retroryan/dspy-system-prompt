@@ -242,3 +242,61 @@ class MetricsResponse(BaseModel):
         ge=0,
         description="Service uptime"
     )
+
+
+class ProgressStep(BaseModel):
+    """Single step in agent execution progress."""
+    model_config = ConfigDict(frozen=True)
+    
+    thought: str = Field(
+        ...,
+        description="Agent's reasoning for this step"
+    )
+    tool_name: Optional[str] = Field(
+        default=None,
+        description="Name of tool to execute"
+    )
+    tool_args: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Arguments for tool execution"
+    )
+    observation: Optional[str] = Field(
+        default=None,
+        description="Result from tool execution"
+    )
+    timestamp: datetime = Field(
+        default_factory=datetime.now,
+        description="When this step occurred"
+    )
+    step_number: int = Field(
+        ...,
+        ge=1,
+        description="Step number in sequence"
+    )
+
+
+class ProgressResponse(BaseModel):
+    """Response for progress endpoint."""
+    model_config = ConfigDict(frozen=True)
+    
+    session_id: str = Field(
+        ...,
+        description="Session identifier"
+    )
+    is_processing: bool = Field(
+        ...,
+        description="Whether query is still being processed"
+    )
+    steps: List[ProgressStep] = Field(
+        default_factory=list,
+        description="Completed steps so far"
+    )
+    elapsed_seconds: float = Field(
+        default=0.0,
+        ge=0,
+        description="Time elapsed since query started"
+    )
+    current_query: Optional[str] = Field(
+        default=None,
+        description="The query being processed"
+    )

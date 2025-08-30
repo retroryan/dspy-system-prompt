@@ -18,17 +18,17 @@ export default function SessionPanel({
           <h3 className="panel-title">Quick Actions</h3>
         </div>
         <div className="quick-actions">
-          <button className="quick-action" onClick={() => onQuickAction('demo')}>
-            <div className="action-icon">🚀</div>
-            <div className="action-label">Run Demo</div>
-          </button>
-          <button className="quick-action" onClick={() => onQuickAction('test')}>
-            <div className="action-icon">🧪</div>
-            <div className="action-label">Run Tests</div>
+          <button className="quick-action" onClick={() => onQuickAction('agriculture')}>
+            <div className="action-icon">🌾</div>
+            <div className="action-label">Agriculture</div>
           </button>
           <button className="quick-action" onClick={() => onQuickAction('weather')}>
             <div className="action-icon">🌤️</div>
             <div className="action-label">Weather</div>
+          </button>
+          <button className="quick-action" onClick={() => onQuickAction('historical')}>
+            <div className="action-icon">📊</div>
+            <div className="action-label">Historical</div>
           </button>
           <button className="quick-action" onClick={() => onQuickAction('search')}>
             <div className="action-icon">🔍</div>

@@ -12,7 +12,7 @@ export function useSession() {
   const [error, setError] = useState(null);
   const [toolSet, setToolSet] = useState('ecommerce');
   const [queryCount, setQueryCount] = useState(0);
-  const [userId] = useState(() => `user_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`);
+  const [userId] = useState('demo_user');
 
   // Generate unique message ID
   const generateId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
