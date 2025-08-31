@@ -79,25 +79,6 @@ class ToolSet(BaseModel):
         # Subclasses override this for custom initialization
         pass
     
-    def load(self) -> None:
-        """
-        Legacy method - registration is now handled explicitly via factory functions.
-        
-        This method is kept for backward compatibility but does nothing.
-        Use the factory functions in shared/tool_set_registry.py instead.
-        """
-        # No-op - explicit registration is now handled by factory functions
-        pass
-    
-    def get_loaded_tools(self) -> List[str]:
-        """
-        Returns a list of names of the tools that are part of this tool set.
-
-        These are the tools that *should* be loaded into the registry when this
-        tool set is activated.
-        """
-        return [tool_class.NAME for tool_class in self.config.tool_classes]
-    
     @classmethod
     def get_test_cases(cls) -> List[ToolSetTestCase]:
         """
@@ -136,3 +117,27 @@ class ToolSet(BaseModel):
             Optional[Type[dspy.Signature]]: The Extract signature class, or None to use default behavior
         """
         return None
+    
+    def provides_instances(self) -> bool:
+        """
+        Indicate whether this tool set provides instances directly.
+        
+        Instance-based tool sets (like MCP) should override this to return True.
+        Class-based tool sets (default) return False.
+        
+        Returns:
+            bool: True if tool set provides instances, False if it provides classes
+        """
+        return False
+    
+    def get_tool_instances(self) -> List[BaseTool]:
+        """
+        Return tool instances for instance-based tool sets.
+        
+        This method is called when provides_instances() returns True.
+        Instance-based tool sets should override this to return their tool instances.
+        
+        Returns:
+            List[BaseTool]: List of tool instances, empty for class-based tool sets
+        """
+        return []

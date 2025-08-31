@@ -140,6 +140,9 @@ class ToolRegistry:
         """
         Registers all tools from a tool set and initializes the tool set.
         
+        Supports both class-based tool sets (original) and instance-based
+        tool sets (for dynamic discovery like MCP).
+        
         Args:
             tool_set: The tool set to register
         """
@@ -148,18 +151,33 @@ class ToolRegistry:
         # Initialize the tool set (e.g., load test data, setup connections)
         tool_set.initialize()
         
-        # Register all tools from the tool set
-        for tool_class in tool_set.config.tool_classes:
-            tool_name = tool_class.NAME
+        # Check if tool set provides instances directly (dynamic tools)
+        if hasattr(tool_set, 'provides_instances') and tool_set.provides_instances():
+            # Instance-based registration (for MCP and other dynamic tools)
+            instances = tool_set.get_tool_instances()
+            for instance in instances:
+                tool_name = instance.name
+                
+                if tool_name in self._instances:
+                    raise ValueError(f"Tool '{tool_name}' is already registered.")
+                
+                # Store instance directly
+                self._instances[tool_name] = instance
+                # Also store in _tools for compatibility (using instance's class)
+                self._tools[tool_name] = instance.__class__
+        else:
+            # Class-based registration (original behavior)
+            for tool_class in tool_set.config.tool_classes:
+                tool_name = tool_class.NAME
 
-            if tool_name in self._tools:
-                raise ValueError(f"Tool '{tool_name}' is already registered.")
+                if tool_name in self._tools:
+                    raise ValueError(f"Tool '{tool_name}' is already registered.")
 
-            self._tools[tool_name] = tool_class
+                self._tools[tool_name] = tool_class
 
-            # Create and cache tool instance. Tools are Pydantic models.
-            instance = tool_class()
-            self._instances[tool_name] = instance
+                # Create and cache tool instance. Tools are Pydantic models.
+                instance = tool_class()
+                self._instances[tool_name] = instance
     
     def get_all_test_cases(self) -> List[ToolSetTestCase]:
         """

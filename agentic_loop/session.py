@@ -286,6 +286,9 @@ class AgentSession:
         elif self.tool_set_name == "events":
             from tools.events.tool_set import EventsToolSet
             registry.register_tool_set(EventsToolSet())
+        elif self.tool_set_name == "real_estate":
+            from tools.real_estate.tool_set import RealEstateToolSet
+            registry.register_tool_set(RealEstateToolSet())
         else:
             raise ValueError(f"Unknown tool set: {self.tool_set_name}")
         
