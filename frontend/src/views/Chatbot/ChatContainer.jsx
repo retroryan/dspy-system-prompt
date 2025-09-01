@@ -3,7 +3,7 @@ import Message from './Message';
 import WelcomeScreen from './WelcomeScreen';
 import ThinkingIndicator from '../../components/ThinkingIndicator';
 
-export default function ChatContainer({ messages, isLoading, onSuggestedPrompt }) {
+export default function ChatContainer({ messages, isLoading, onSuggestedPrompt, onToolSetChange, onDemoQuery }) {
   const hasMessages = messages && messages.length > 0;
   const messagesEndRef = useRef(null);
   
@@ -18,7 +18,11 @@ export default function ChatContainer({ messages, isLoading, onSuggestedPrompt }
     <div className="chat-container">
       <div className="chat-messages" id="chatMessages">
         {!hasMessages ? (
-          <WelcomeScreen onSuggestedPrompt={onSuggestedPrompt} />
+          <WelcomeScreen 
+            onSuggestedPrompt={onSuggestedPrompt} 
+            onToolSetChange={onToolSetChange}
+            onDemoQuery={onDemoQuery}
+          />
         ) : (
           <>
             {messages.map((message, index) => (

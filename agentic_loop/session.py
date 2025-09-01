@@ -87,7 +87,7 @@ class AgentSession:
     
     def __init__(
         self,
-        tool_set_name: str = "agriculture",
+        tool_set_name: str = "real_estate_mcp",
         user_id: str = "demo_user",
         config: Optional[Dict[str, Any]] = None,
         verbose: bool = False
@@ -286,9 +286,10 @@ class AgentSession:
         elif self.tool_set_name == "events":
             from tools.events.tool_set import EventsToolSet
             registry.register_tool_set(EventsToolSet())
-        elif self.tool_set_name == "real_estate":
-            from tools.real_estate.tool_set import RealEstateToolSet
-            registry.register_tool_set(RealEstateToolSet())
+        elif self.tool_set_name == "real_estate_mcp":
+            from tools.real_estate.mcp_tool_set import RealEstateMCPToolSet
+            # MCP tools use dynamic discovery from the server
+            registry.register_tool_set(RealEstateMCPToolSet(server_url="http://localhost:8000/mcp"))
         else:
             raise ValueError(f"Unknown tool set: {self.tool_set_name}")
         

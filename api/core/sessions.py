@@ -102,7 +102,7 @@ class SessionManager:
             ToolSetNotFoundException: If tool set is invalid
         """
         # Validate tool set
-        valid_tool_sets = ["agriculture", "ecommerce", "events"]
+        valid_tool_sets = ["agriculture", "ecommerce", "events", "real_estate_mcp"]
         if tool_set not in valid_tool_sets:
             raise ToolSetNotFoundException(tool_set)
         

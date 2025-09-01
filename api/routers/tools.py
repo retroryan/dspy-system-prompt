@@ -95,6 +95,26 @@ def get_tool_set_info(name: str) -> ToolSetInfo:
                 "Cancel my registration for event #789",
                 "Show me all my event registrations"
             ]
+        ),
+        "real_estate_mcp": ToolSetInfo(
+            name="real_estate_mcp",
+            description="Real Estate tools powered by MCP for property search and neighborhood information",
+            tools=[
+                "search_properties_tool",
+                "get_property_details_tool",
+                "search_wikipedia_tool",
+                "find_property_images_tool",
+                "analyze_images_tool",
+                "scrape_url_tool"
+            ],
+            example_queries=[
+                "Find modern family homes with pools in Oakland under $800k",
+                "Tell me about the Temescal neighborhood in Oakland",
+                "Search luxury properties with stunning views",
+                "Show me family homes near top-rated schools in San Francisco",
+                "Get details for property ID 123456",
+                "Find condos with ocean views in Berkeley"
+            ]
         )
     }
     
@@ -116,7 +136,7 @@ def list_tool_sets():
         List of tool set information
     """
     tool_sets = []
-    for name in ["agriculture", "ecommerce", "events"]:
+    for name in ["agriculture", "ecommerce", "events", "real_estate_mcp"]:
         try:
             tool_sets.append(get_tool_set_info(name))
         except Exception as e:

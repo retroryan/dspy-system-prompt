@@ -37,7 +37,7 @@ fi
 cd ..
 
 # Set default environment variables if not already set
-export API_PORT="${API_PORT:-8000}"
+export API_PORT="${API_PORT:-3010}"
 export API_HOST="${API_HOST:-0.0.0.0}"
 export DEBUG_MODE="${DEBUG_MODE:-false}"
 export LOG_LEVEL="${LOG_LEVEL:-INFO}"

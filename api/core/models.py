@@ -31,8 +31,8 @@ class SessionCreateRequest(BaseModel):
     model_config = ConfigDict(frozen=True)
     
     tool_set: str = Field(
-        ...,
-        description="Tool set to use (ecommerce, agriculture, events)"
+        default="real_estate_mcp",
+        description="Tool set to use (real_estate_mcp, ecommerce, agriculture, events)"
     )
     user_id: str = Field(
         ...,

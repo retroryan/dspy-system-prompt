@@ -41,9 +41,17 @@ export default function MessageInput({ onSendMessage, isLoading, onCommand, tool
     }
   };
   
-  const insertCommand = (command) => {
-    setInputValue(command + ' ');
-    textareaRef.current?.focus();
+  const handleQuickCommand = (command) => {
+    // Execute commands directly instead of inserting them
+    if (command === '/clear') {
+      if (onCommand) {
+        onCommand(command);
+      }
+    } else {
+      // For other commands, insert them in the input
+      setInputValue(command + ' ');
+      textareaRef.current?.focus();
+    }
   };
   
   return (
@@ -58,6 +66,7 @@ export default function MessageInput({ onSendMessage, isLoading, onCommand, tool
             onChange={(e) => onToolSetChange && onToolSetChange(e.target.value)}
             disabled={isLoading}
           >
+            <option value="real_estate_mcp">🏠 Real Estate</option>
             <option value="ecommerce">🛒 E-commerce</option>
             <option value="agriculture">🌾 Agriculture</option>
             <option value="events">📅 Events</option>
@@ -68,7 +77,7 @@ export default function MessageInput({ onSendMessage, isLoading, onCommand, tool
             <button
               key={index}
               className="input-chip"
-              onClick={() => insertCommand(action.command)}
+              onClick={() => handleQuickCommand(action.command)}
               disabled={isLoading}
             >
               {action.label}

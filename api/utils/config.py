@@ -14,7 +14,7 @@ class APIConfig(BaseModel):
     
     # Server settings
     api_port: int = Field(
-        default=8000,
+        default=3010,
         description="API server port"
     )
     api_host: str = Field(
@@ -92,7 +92,7 @@ class APIConfig(BaseModel):
     def from_env(cls) -> "APIConfig":
         """Create configuration from environment variables."""
         return cls(
-            api_port=int(os.getenv("API_PORT", "8000")),
+            api_port=int(os.getenv("API_PORT", "3010")),
             api_host=os.getenv("API_HOST", "0.0.0.0"),
             session_ttl_minutes=int(os.getenv("SESSION_TTL_MINUTES", "30")),
             max_sessions_per_user=int(os.getenv("MAX_SESSIONS_PER_USER", "50")),

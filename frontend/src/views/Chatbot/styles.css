@@ -176,6 +176,30 @@
   line-height: 1.6;
 }
 
+/* Featured Real Estate Queries */
+.featured-queries {
+  width: 100%;
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.featured-title {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+  text-align: center;
+  font-weight: 600;
+}
+
+.featured-cards {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
 .suggested-prompts {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

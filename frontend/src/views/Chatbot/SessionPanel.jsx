@@ -26,9 +26,9 @@ export default function SessionPanel({
             <div className="action-icon">🌤️</div>
             <div className="action-label">Weather</div>
           </button>
-          <button className="quick-action" onClick={() => onQuickAction('historical')}>
-            <div className="action-icon">📊</div>
-            <div className="action-label">Historical</div>
+          <button className="quick-action" onClick={() => onQuickAction('real_estate')}>
+            <div className="action-icon">🏠</div>
+            <div className="action-label">Real Estate</div>
           </button>
           <button className="quick-action" onClick={() => onQuickAction('search')}>
             <div className="action-icon">🔍</div>
