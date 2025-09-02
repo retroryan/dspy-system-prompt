@@ -51,7 +51,7 @@ def run_react_loop(
     messages: MessageList,
     user_query: str,
     context_prompt: str,
-    max_iterations: int = 5,
+    max_iterations: int = 10,
     session: Optional['AgentSession'] = None,
     verbose: bool = False
 ) -> MessageList:
@@ -86,6 +86,7 @@ def run_react_loop(
     if verbose:
         print(f"{'='*80}")
         print("Starting React loop")
+        print(f"Query: {user_query}")
         print(f"{'='*80}")
     
     logger.debug("Starting ReactAgent loop")
@@ -118,15 +119,15 @@ def run_react_loop(
         
         # Demo logging for React iteration
         if verbose:
-            print(f"react loop call {iteration_num} - log of results:")
+            print(f"\n🔄 Iteration {iteration_num}:")
             if last_trajectory and last_trajectory.thought:
-                print(f"  Thought: {last_trajectory.thought}")
+                print(f"  💭 Thought: {last_trajectory.thought}")
             if tool_use:
-                print(f"  Tool: {tool_use.tool_name}")
-                print(f"  Args: {tool_use.tool_args}")
+                print(f"  🔧 Tool: {tool_use.tool_name}")
+                if tool_use.tool_args:
+                    print(f"  📝 Args: {tool_use.tool_args}")
                 if tool_use.tool_name == "finish":
-                    print(f"  Action: Final Answer")
-            print()
+                    print(f"  ✅ Action: Final Answer")
         
         # Check if agent has decided to finish
         if tool_use and tool_use.tool_name == "finish":
@@ -159,7 +160,8 @@ def run_react_loop(
                 # Demo logging for tool result
                 if verbose:
                     result_str = str(result)[:100] + "..." if len(str(result)) > 100 else str(result)
-                    print(f"  Result: {result_str}")
+                    print(f"  📊 Result: {result_str}")
+                    print()
                 
                 execution_time = (time.time() - iteration_start) * 1000
                 message_list.add_tool_result(
@@ -200,13 +202,13 @@ def run_react_loop(
     
     # Demo logging summary
     if verbose:
-        print(f"summary:")
-        print(f"✓ React loop completed")
-        print(f"  Total iterations: {message_list.iteration_count}")
+        print(f"\n📈 Summary:")
+        print(f"  ✅ React loop completed")
+        print(f"  🔢 Total iterations: {message_list.iteration_count}")
         if message_list.tools_used:
-            print(f"  Tools used: {', '.join(message_list.tools_used)}")
+            print(f"  🔧 Tools used: {', '.join(message_list.tools_used)}")
         else:
-            print("  Tools used: None (used context)")
+            print("  🔧 Tools used: None (used context)")
         print()
     
     return message_list

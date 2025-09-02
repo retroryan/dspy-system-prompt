@@ -122,7 +122,7 @@ class AgenticLoopClient:
     def query(
         self,
         text: str,
-        max_iterations: int = 5,
+        max_iterations: int = 10,
         session_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """

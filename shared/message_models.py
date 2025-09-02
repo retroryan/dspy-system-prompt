@@ -65,7 +65,7 @@ class MessageList(BaseModel):
     messages: List[Message] = Field(default_factory=list, description="List of messages")
     user_query: str = Field(..., description="The original user query")
     tool_set_name: str = Field(..., description="Name of the tool set being used")
-    max_iterations: int = Field(default=5, description="Maximum iterations allowed")
+    max_iterations: int = Field(default=10, description="Maximum iterations allowed")
     started_at: datetime = Field(default_factory=datetime.now, description="Start time")
     completed_at: Optional[datetime] = Field(None, description="Completion time")
     metadata: Optional[Dict[str, Any]] = Field(None, description="Optional metadata")

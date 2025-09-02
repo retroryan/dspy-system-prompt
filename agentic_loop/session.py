@@ -129,7 +129,7 @@ class AgentSession:
         
         logger.debug(f"Initialized AgentSession with {tool_set_name} tools for user {user_id}")
     
-    def query(self, text: str, max_iterations: int = 5) -> SessionResult:
+    def query(self, text: str, max_iterations: int = 10) -> SessionResult:
         """
         Process a query with automatic context management using MessageList.
         

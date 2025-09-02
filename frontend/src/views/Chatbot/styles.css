@@ -426,6 +426,27 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+  padding: 0.25rem;
+  margin: -0.25rem -0.25rem 1rem -0.25rem;
+  border-radius: 4px;
+}
+
+.panel-header:hover {
+  background-color: rgba(30, 41, 59, 0.04);
+}
+
+.panel-card.collapsed .panel-header {
+  margin-bottom: 0;
+}
+
+.collapse-icon {
+  display: inline-block;
+  margin-right: 0.5rem;
+  font-size: 0.8em;
+  transition: transform 0.2s;
 }
 
 .panel-title {

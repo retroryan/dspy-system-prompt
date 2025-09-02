@@ -34,6 +34,24 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd "$SCRIPT_DIR"
 
+# Function to load .env file and get values
+get_env_value() {
+    local key="$1"
+    local default="$2"
+    
+    if [ -f ".env" ]; then
+        # Extract value from .env file, handling comments and spaces
+        local value=$(grep "^${key}=" .env 2>/dev/null | head -1 | cut -d'=' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed 's/^"//;s/"$//')
+        if [ -n "$value" ]; then
+            echo "$value"
+        else
+            echo "$default"
+        fi
+    else
+        echo "$default"
+    fi
+}
+
 # Parse options
 VERBOSE=false
 DEBUG=false
@@ -73,11 +91,42 @@ show_help() {
     echo "  ./run_demo.sh --all              # Run all demos"
     echo "  ./run_demo.sh --debug ecommerce  # Run ecommerce demo with debug output"
     echo
-    echo -e "${GREEN}Environment Variables:${NC}"
-    echo "  DSPY_PROVIDER    LLM provider (default: ollama)"
-    echo "  OLLAMA_MODEL     Ollama model (default: gemma2:27b)"
-    echo "  LLM_TEMPERATURE  Temperature (default: 0.7)"
-    echo "  LLM_MAX_TOKENS   Max tokens (default: 1024)"
+    echo -e "${GREEN}Environment Variables (current values):${NC}"
+    
+    # Get actual values from .env or environment
+    local llm_model=$(get_env_value "LLM_MODEL" "ollama_chat/gemma2:27b")
+    local llm_temp=$(get_env_value "LLM_TEMPERATURE" "0.7")
+    local llm_tokens=$(get_env_value "LLM_MAX_TOKENS" "1024")
+    local demo_debug=$(get_env_value "DEMO_DEBUG" "false")
+    local dspy_debug=$(get_env_value "DSPY_DEBUG" "false")
+    
+    # Determine provider from LLM_MODEL
+    local provider="ollama"
+    if [[ "$llm_model" == openrouter/* ]]; then
+        provider="openrouter"
+    elif [[ "$llm_model" == anthropic/* ]]; then
+        provider="anthropic"
+    elif [[ "$llm_model" == openai/* ]]; then
+        provider="openai"
+    elif [[ "$llm_model" == gemini/* ]]; then
+        provider="gemini"
+    elif [[ "$llm_model" == ollama_chat/* ]]; then
+        provider="ollama"
+    fi
+    
+    echo "  LLM_MODEL        $llm_model"
+    echo "  LLM_TEMPERATURE  $llm_temp"
+    echo "  LLM_MAX_TOKENS   $llm_tokens"
+    echo "  DEMO_DEBUG       $demo_debug"
+    echo "  DSPY_DEBUG       $dspy_debug"
+    
+    if [ -f ".env" ]; then
+        echo
+        echo -e "  ${CYAN}(Values loaded from .env)${NC}"
+    else
+        echo
+        echo -e "  ${YELLOW}(Using defaults - no .env file found)${NC}"
+    fi
 }
 
 # Function to list demos

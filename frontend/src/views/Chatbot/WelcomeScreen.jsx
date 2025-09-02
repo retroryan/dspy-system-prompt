@@ -32,6 +32,24 @@ const SUGGESTED_PROMPTS = [
     prompt: 'Show me family homes near top-rated schools in San Francisco',
     toolSet: 'real_estate_mcp'
   },
+  {
+    icon: '🌊',
+    text: 'Luxury waterfront condo in San Francisco',
+    prompt: 'Luxury waterfront condo in San Francisco',
+    toolSet: 'real_estate_mcp'
+  },
+  {
+    icon: '🏘️',
+    text: 'Family home in Salinas California',
+    prompt: 'Family home in Salinas California',
+    toolSet: 'real_estate_mcp'
+  },
+  {
+    icon: '🍳',
+    text: 'Modern kitchen in San Francisco',
+    prompt: 'Modern kitchen in San Francisco',
+    toolSet: 'real_estate_mcp'
+  },
   // Original queries
   {
     icon: '🌤️',
