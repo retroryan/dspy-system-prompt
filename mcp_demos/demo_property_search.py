@@ -6,7 +6,8 @@ simulating an agent-like interaction for property searches.
 import sys
 import json
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Any
+from datetime import datetime
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -23,27 +24,34 @@ def execute_search_query(registry: ToolRegistry, query: str, context: str) -> Di
     # Determine which tool to use based on query content
     if "neighborhood" in query.lower() or "tell me about" in query.lower():
         # Use Wikipedia search for neighborhood info
-        tool_name = "search_wikipedia_tool"
-        
-        # Extract location from query (simple parsing)
-        if "temescal" in query.lower():
-            city = "Oakland"
-            query_text = "Temescal neighborhood"
-        elif "oakland" in query.lower():
-            city = "Oakland"
-            query_text = query
-        elif "san francisco" in query.lower():
-            city = "San Francisco"
-            query_text = query
+        if "temescal" in query.lower() or "oakland" in query.lower():
+            tool_name = "search_wikipedia_by_location_tool"
+            tool_call = ToolCall(
+                tool_name=tool_name,
+                arguments={
+                    "city": "Oakland",
+                    "state": "CA",
+                    "query": "Temescal neighborhood history culture" if "temescal" in query.lower() else "neighborhoods history",
+                    "size": 3
+                }
+            )
         else:
-            city = ""
-            query_text = query
-        
+            tool_name = "search_wikipedia_tool"
+            tool_call = ToolCall(
+                tool_name=tool_name,
+                arguments={
+                    "query": query,
+                    "size": 3
+                }
+            )
+    elif "luxury" in query.lower() or "stunning" in query.lower():
+        # Use natural language search for descriptive queries
+        tool_name = "natural_language_search_tool"
         tool_call = ToolCall(
             tool_name=tool_name,
             arguments={
-                "query": query_text,
-                "city": city,
+                "query": query,
+                "search_type": "semantic",
                 "size": 3
             }
         )
@@ -53,17 +61,21 @@ def execute_search_query(registry: ToolRegistry, query: str, context: str) -> Di
         
         # Extract price if mentioned
         max_price = None
+        min_price = None
         if "under" in query.lower():
             # Simple price extraction
             if "800k" in query.lower():
                 max_price = 800000
+            elif "900k" in query.lower():
+                max_price = 900000
             elif "1m" in query.lower() or "million" in query.lower():
                 max_price = 1000000
         
-        # Build arguments, excluding None values
-        args = {"query": query, "size": 3}
+        # Build arguments
+        args = {"query": query, "size": 5}
         if max_price is not None:
             args["max_price"] = max_price
+            args["min_price"] = max_price * 0.5  # Set a reasonable min price
             
         tool_call = ToolCall(
             tool_name=tool_name,
@@ -81,7 +93,7 @@ def execute_search_query(registry: ToolRegistry, query: str, context: str) -> Di
     }
 
 
-def format_property_result(result: Dict) -> str:
+def format_property_result(result: Any) -> str:
     """Format property search results as a friendly response."""
     if isinstance(result, str):
         try:
@@ -92,19 +104,30 @@ def format_property_result(result: Dict) -> str:
     if not isinstance(result, dict):
         return str(result)[:500]
     
-    properties = result.get('properties', [])
-    total = result.get('total_results', 0)
+    properties = result.get('properties', result.get('results', []))
+    total = result.get('total_results', result.get('total', len(properties)))
     
     if not properties:
-        return "I couldn't find any properties matching your criteria."
+        return "I couldn't find any properties matching your criteria. Try broadening your search."
     
     response = f"I found {total} properties matching your search. Here are the top results:\n\n"
     
     for i, prop in enumerate(properties[:3], 1):
-        response += f"{i}. {prop.get('property_type', 'Property').title()} - ${prop.get('price', 0):,.0f}\n"
-        response += f"   {prop.get('bedrooms', 0)} bed, {prop.get('bathrooms', 0)} bath, "
-        response += f"{prop.get('square_feet', 0):,} sqft\n"
-        response += f"   {prop.get('description', '')[:100]}...\n\n"
+        prop_type = prop.get('property_type', prop.get('type', 'Property'))
+        price = prop.get('price', 0)
+        bedrooms = prop.get('bedrooms', prop.get('beds', 0))
+        bathrooms = prop.get('bathrooms', prop.get('baths', 0))
+        sqft = prop.get('square_feet', prop.get('sqft', 0))
+        desc = prop.get('description', prop.get('summary', ''))
+        address = prop.get('address', prop.get('location', ''))
+        
+        response += f"{i}. {prop_type.title()} - ${price:,.0f}\n"
+        if address:
+            response += f"   📐 {address}\n"
+        response += f"   {bedrooms} bed, {bathrooms} bath, {sqft:,} sqft\n"
+        if desc:
+            response += f"   {desc[:100]}...\n"
+        response += "\n"
     
     return response
 
@@ -131,7 +154,7 @@ def demo_property_search():
     # Demo queries that tell a story
     queries = [
         {
-            "query": "I'm looking for a modern family home with a pool in Oakland, ideally under $800k",
+            "query": "I'm looking for a modern family home with a pool in Oakland, ideally under $900k",
             "context": "First-time homebuyer searching for family home"
         },
         {
@@ -141,6 +164,14 @@ def demo_property_search():
         {
             "query": "Find luxury properties with stunning views and modern kitchens",
             "context": "Exploring luxury market"
+        },
+        {
+            "query": "Show me cozy cottages with character, perfect for a young couple",
+            "context": "Looking for starter home with personality"
+        },
+        {
+            "query": "What are the best properties near good schools and parks?",
+            "context": "Family-focused property search"
         }
     ]
     
@@ -155,30 +186,38 @@ def demo_property_search():
         
         if result['success']:
             # Format the response based on tool used
-            if result['tool_used'] == 'search_properties_tool':
+            if result['tool_used'] in ['search_properties_tool', 'natural_language_search_tool']:
                 response = format_property_result(result['result'])
-            elif result['tool_used'] == 'search_wikipedia_tool':
+            elif 'wikipedia' in result['tool_used']:
                 # Format Wikipedia results
                 wiki_result = result['result']
                 if isinstance(wiki_result, str):
                     try:
                         wiki_result = json.loads(wiki_result)
                     except:
-                        response = wiki_result[:500]
+                        response = f"Here's what I found:\n{wiki_result[:500]}..."
                     else:
-                        articles = wiki_result.get('articles', [])
+                        articles = wiki_result.get('articles', wiki_result.get('results', []))
                         if articles:
                             response = f"Here's what I found about {item['query']}:\n\n"
                             for article in articles[:2]:
-                                response += f"📚 {article.get('title', 'Article')}\n"
-                                summary = article.get('summary', article.get('content', ''))[:200]
-                                response += f"   {summary}...\n\n"
+                                title = article.get('title', article.get('name', 'Article'))
+                                summary = article.get('summary', article.get('content', article.get('description', '')))
+                                url = article.get('url', '')
+                                response += f"📚 {title}\n"
+                                if url:
+                                    response += f"   🔗 {url}\n"
+                                response += f"   {summary[:200]}...\n\n"
                         else:
-                            response = "I found some information about this area."
+                            response = "I found information about this area. Let me know if you'd like more details."
                 else:
                     response = str(wiki_result)[:500]
             else:
-                response = str(result['result'])[:500]
+                # Handle other tool responses
+                if isinstance(result['result'], dict):
+                    response = json.dumps(result['result'], indent=2)[:500] + "..."
+                else:
+                    response = str(result['result'])[:500]
             
             print(f"\n🏠 Assistant: {response}")
         else:
@@ -194,9 +233,12 @@ def demo_property_search():
     print(f"{'='*70}")
     print(f"✅ Successfully processed {len(queries)} property-related queries")
     print(f"🔧 MCP tools provided real-time data from the server")
-    print(f"🏡 Each query used the appropriate tool automatically")
-    print("\n💡 This demo shows how MCP tools enable intelligent real estate assistance")
-    print("   through dynamic tool discovery and execution.")
+    print(f"🏡 Each query used the appropriate tool automatically:")
+    print(f"   • Property search for home queries")
+    print(f"   • Wikipedia for neighborhood research")
+    print(f"   • Semantic search for natural language queries")
+    print("\n💡 All data is live from the MCP server - no mock data!")
+    print("   This demo shows intelligent real estate assistance in action.")
 
 
 if __name__ == "__main__":

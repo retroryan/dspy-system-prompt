@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './Sidebar.css';
 
 const NAVIGATION_ITEMS = [
@@ -11,11 +11,22 @@ const NAVIGATION_ITEMS = [
 ];
 
 export default function Sidebar({ currentView, onViewChange }) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   return (
-    <aside className="sidebar">
-      <div className="logo">
-        <div className="logo-icon">D</div>
-        <div className="logo-text">DSPy Agent</div>
+    <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+      <div className="sidebar-header">
+        <div className="logo">
+          <div className="logo-icon">D</div>
+          {!isCollapsed && <div className="logo-text">DSPy Agent</div>}
+        </div>
+        <button 
+          className="collapse-btn"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {isCollapsed ? '→' : '←'}
+        </button>
       </div>
       
       <nav>
@@ -25,9 +36,10 @@ export default function Sidebar({ currentView, onViewChange }) {
               <button
                 className={`nav-link ${currentView === item.id ? 'active' : ''}`}
                 onClick={() => onViewChange(item.id)}
+                title={isCollapsed ? item.label : ''}
               >
                 <span className="nav-icon">{item.icon}</span>
-                <span>{item.label}</span>
+                {!isCollapsed && <span>{item.label}</span>}
               </button>
             </li>
           ))}

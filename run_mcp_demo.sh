@@ -27,6 +27,9 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+# Track start time
+START_TIME=$(date +"%Y-%m-%d %H:%M:%S")
+
 # Script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd "$SCRIPT_DIR"
@@ -101,19 +104,28 @@ show_menu() {
     echo -e "  ${BLUE}3)${NC} 🏠 Property Search Demo"
     echo -e "     ${YELLOW}Natural language property search with intelligent tool selection${NC}"
     echo
-    echo -e "  ${BLUE}4)${NC} 🎭 Complete Showcase"
+    echo -e "  ${BLUE}4)${NC} 🤖 AI Semantic Search Demo"
+    echo -e "     ${YELLOW}Natural language understanding with AI embeddings${NC}"
+    echo
+    echo -e "  ${BLUE}5)${NC} 🌍 Location Discovery Demo"
+    echo -e "     ${YELLOW}Location-based contextual discovery and insights${NC}"
+    echo
+    echo -e "  ${BLUE}6)${NC} 🔄 Multi-Tool Orchestration Demo"
+    echo -e "     ${YELLOW}Complex scenarios with coordinated tool usage${NC}"
+    echo
+    echo -e "  ${BLUE}7)${NC} 🎭 Complete Showcase (All Demos)"
     echo -e "     ${YELLOW}Run all demos in sequence${NC}"
     echo
-    echo -e "  ${BLUE}5)${NC} 🧪 Integration Tests"
+    echo -e "  ${BLUE}8)${NC} 🧪 Integration Tests"
     echo -e "     ${YELLOW}Run the complete test suite${NC}"
     echo
-    echo -e "  ${BLUE}6)${NC} 📊 Quick Test"
-    echo -e "     ${YELLOW}Test MCP connection and tool discovery${NC}"
+    echo -e "  ${BLUE}9)${NC} 📊 Quick Connection Test"
+    echo -e "     ${YELLOW}Test MCP server connectivity${NC}"
     echo
     echo -e "  ${BLUE}q)${NC} Exit"
     echo
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -n -e "${GREEN}Select an option [1-6, q]: ${NC}"
+    echo -n -e "${GREEN}Select an option [1-9, q]: ${NC}"
 }
 
 # Function to run a demo
@@ -136,14 +148,28 @@ run_demo() {
             demo_name="Property Search Demo"
             ;;
         4)
-            demo_file="mcp_demos/run_all_demos.py"
-            demo_name="Complete Showcase"
+            demo_file="mcp_demos/demo_semantic_search.py"
+            demo_name="AI Semantic Search Demo"
             ;;
         5)
+            demo_file="mcp_demos/demo_location_context.py"
+            demo_name="Location Discovery Demo"
+            ;;
+        6)
+            demo_file="mcp_demos/demo_multi_tool.py"
+            demo_name="Multi-Tool Orchestration Demo"
+            ;;
+        7)
+            # Run all demos in sequence
+            demo_name="Complete Showcase"
+            run_all_demos true  # Run in interactive mode when selected from menu
+            return
+            ;;
+        8)
             demo_file="tools/real_estate/test_mcp_integration.py"
             demo_name="Integration Tests"
             ;;
-        6)
+        9)
             # Quick test - just try to discover tools
             echo -e "${CYAN}Running quick MCP connection test...${NC}"
             echo
@@ -188,17 +214,113 @@ for t in tools:
 
 # Function to run all demos
 run_all_demos() {
-    echo -e "${CYAN}Running all demos in sequence...${NC}"
+    local interactive=${1:-true}  # Default to interactive mode
+    
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${PURPLE}MCP TOOL INTEGRATION - COMPLETE DEMO SHOWCASE${NC}"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${YELLOW}Running all MCP demos with REAL SERVER DATA${NC}"
+    echo -e "Start time: $START_TIME"
     echo
     
-    for i in 1 2 4; do
-        run_demo $i
+    local demos=(1 2 3 4 5 6)
+    local demo_names=(
+        "Tool Discovery Demo"
+        "Direct Tool Execution Demo"
+        "Property Search Demo"
+        "AI Semantic Search Demo"
+        "Location Discovery Demo"
+        "Multi-Tool Orchestration Demo"
+    )
+    
+    local total=${#demos[@]}
+    local successful=0
+    local failed=0
+    local start_seconds=$(date +%s)
+    
+    echo -e "${GREEN}📋 Demos to run (${total} total):${NC}"
+    for i in "${!demos[@]}"; do
+        echo -e "   $((i+1)). ${demo_names[$i]}"
+    done
+    echo
+    echo -e "${CYAN}🚀 Starting demo sequence...${NC}"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    sleep 2
+    
+    for i in "${!demos[@]}"; do
         echo
-        echo -e "${YELLOW}Press Enter to continue to next demo...${NC}"
-        read -r
+        echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${GREEN}Demo $((i+1))/${total}: ${demo_names[$i]}${NC}"
+        echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        
+        if run_demo ${demos[$i]}; then
+            ((successful++))
+            echo -e "${GREEN}✅ ${demo_names[$i]} completed successfully${NC}"
+        else
+            ((failed++))
+            echo -e "${RED}❌ ${demo_names[$i]} failed${NC}"
+        fi
+        
+        if [ $((i+1)) -lt $total ]; then
+            if [ "$interactive" = "true" ]; then
+                echo
+                echo -e "${YELLOW}⏸️  Press Enter to continue to next demo...${NC}"
+                read -r
+            else
+                echo
+                echo -e "${YELLOW}⏱️  Continuing to next demo...${NC}"
+                sleep 2
+            fi
+        fi
     done
     
-    echo -e "${GREEN}All demos completed!${NC}"
+    local end_seconds=$(date +%s)
+    local total_time=$((end_seconds - start_seconds))
+    local end_time=$(date +"%Y-%m-%d %H:%M:%S")
+    
+    echo
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${PURPLE}COMPLETE DEMO SHOWCASE SUMMARY${NC}"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo
+    echo -e "${GREEN}📊 Results: ${successful}/${total} demos completed successfully${NC}"
+    
+    if [ $failed -gt 0 ]; then
+        echo -e "${RED}   ${failed} demo(s) failed${NC}"
+    fi
+    
+    echo -e "${BLUE}⏱️  Total execution time: ${total_time} seconds${NC}"
+    echo -e "${BLUE}🕐 End time: ${end_time}${NC}"
+    echo
+    
+    if [ $successful -eq $total ]; then
+        echo -e "${GREEN}🎉 ALL DEMOS COMPLETED SUCCESSFULLY!${NC}"
+        echo
+        echo -e "${CYAN}📊 Demo Coverage:${NC}"
+        echo -e "   ✅ Dynamic tool discovery from MCP server"
+        echo -e "   ✅ Direct tool execution with real data"
+        echo -e "   ✅ Intelligent property search"
+        echo -e "   ✅ AI-powered semantic understanding"
+        echo -e "   ✅ Location-based contextual discovery"
+        echo -e "   ✅ Multi-tool orchestration for complex scenarios"
+        echo
+        echo -e "${CYAN}💡 Key Features Demonstrated:${NC}"
+        echo -e "   • All data is LIVE from the MCP server"
+        echo -e "   • No mock data or hardcoded responses"
+        echo -e "   • Tools discovered dynamically at runtime"
+        echo -e "   • Clean architecture without DSPy dependency"
+        echo -e "   • Real-world scenarios and use cases"
+        echo
+        echo -e "${GREEN}🚀 The MCP tool integration is production-ready!${NC}"
+    else
+        echo -e "${YELLOW}⚠️  ${failed} demo(s) had issues.${NC}"
+        echo -e "Please check the error messages above."
+        echo
+        echo -e "${CYAN}Troubleshooting:${NC}"
+        echo -e "1. Ensure MCP server is running at $MCP_SERVER_URL"
+        echo -e "2. Check that all required services are available"
+        echo -e "3. Verify network connectivity to the server"
+    fi
 }
 
 # Function to show help
@@ -209,7 +331,7 @@ show_help() {
     echo
     echo -e "${GREEN}Options:${NC}"
     echo "  (no args)      Show interactive menu"
-    echo "  1-6            Run specific demo by number"
+    echo "  1-9            Run specific demo by number"
     echo "  --all          Run all demos in sequence"
     echo "  --test         Run integration tests"
     echo "  --quick        Quick connection test"
@@ -219,9 +341,12 @@ show_help() {
     echo "  1 - Tool Discovery Demo"
     echo "  2 - Direct Tool Execution Demo"
     echo "  3 - Property Search Demo"
-    echo "  4 - Complete Showcase"
-    echo "  5 - Integration Tests"
-    echo "  6 - Quick Connection Test"
+    echo "  4 - AI Semantic Search Demo"
+    echo "  5 - Location Discovery Demo"
+    echo "  6 - Multi-Tool Orchestration Demo"
+    echo "  7 - Complete Showcase (All Demos)"
+    echo "  8 - Integration Tests"
+    echo "  9 - Quick Connection Test"
     echo
     echo -e "${GREEN}Environment Variables:${NC}"
     echo "  MCP_SERVER_URL   MCP server URL (default: http://localhost:8000/mcp)"
@@ -250,22 +375,22 @@ main() {
         --all)
             show_header
             check_prerequisites
-            run_all_demos
+            run_all_demos false  # Run in non-interactive mode
             exit 0
             ;;
         --test)
             show_header
             check_prerequisites
-            run_demo 5
+            run_demo 8
             exit 0
             ;;
         --quick)
             show_header
             check_prerequisites
-            run_demo 6
+            run_demo 9
             exit 0
             ;;
-        [1-6])
+        [1-9])
             show_header
             check_prerequisites
             run_demo "$1"
@@ -290,7 +415,7 @@ main() {
         read -r choice
         
         case $choice in
-            [1-6])
+            [1-9])
                 echo
                 run_demo "$choice"
                 echo

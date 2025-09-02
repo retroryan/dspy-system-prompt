@@ -9,7 +9,7 @@ echo "=========================================="
 echo ""
 
 # Set default ports if not already set
-API_PORT="${API_PORT:-8000}"
+API_PORT="${API_PORT:-3010}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 
 # Function to find and kill process on a specific port

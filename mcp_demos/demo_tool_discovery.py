@@ -5,8 +5,10 @@ showing how tools are discovered at runtime from the server.
 """
 import sys
 import asyncio
+import json
 from pathlib import Path
 from typing import Dict, Any
+from datetime import datetime
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -15,6 +17,7 @@ sys.path.insert(0, str(project_root))
 from tools.real_estate.mcp_client import create_mcp_client
 from tools.real_estate.mcp_tool_set import RealEstateMCPToolSet
 from shared.tool_utils.registry import ToolRegistry
+from shared.models import ToolCall
 
 
 def display_tool_schema(tool_name: str, tool_instance):
@@ -39,6 +42,8 @@ async def discover_tools_async():
     """Discover tools from MCP server asynchronously."""
     client = create_mcp_client("http://localhost:8000/mcp")
     tools = await client.discover_tools()
+    if not tools:
+        raise Exception("No tools discovered from MCP server. Please ensure the server is running.")
     return tools
 
 
@@ -134,8 +139,42 @@ def demo_tool_discovery():
             tool = registry.get_tool(tool_name)
             display_tool_schema(tool_name, tool)
     
-    # Step 4: Demonstrate Dynamic Nature
-    print(f"\n🎯 Step 4: Dynamic Nature Demonstration")
+    # Step 5: Live Tool Execution Example
+    print(f"\n🚀 Step 5: Live Tool Execution Example")
+    print("-" * 40)
+    
+    print("\nExecuting health check to verify server connectivity...")
+    
+    # Try health check
+    health_call = ToolCall(
+        tool_name="health_check_tool",
+        arguments={}
+    )
+    
+    result = registry.execute_tool(health_call)
+    if result.success:
+        print("\n✅ Health Check Results:")
+        if isinstance(result.result, str):
+            try:
+                data = json.loads(result.result)
+                print(f"   Status: {data.get('status', 'unknown').upper()}")
+                print(f"   Timestamp: {datetime.now().isoformat()}")
+                services = data.get('services', {})
+                for service, info in services.items():
+                    status = info.get('status', 'unknown')
+                    emoji = "✅" if status == "healthy" else "⚠️"
+                    print(f"   {emoji} {service}: {info.get('message', 'No message')}")
+            except:
+                print(f"   Result: {result.result}")
+        else:
+            print(f"   Result: {result.result}")
+        print(f"   Execution time: {result.execution_time:.3f}s")
+    else:
+        print(f"❌ Health check failed: {result.error}")
+        raise Exception(f"Server health check failed: {result.error}")
+    
+    # Step 6: Demonstrate Dynamic Nature
+    print(f"\n🎯 Step 6: Dynamic Nature Demonstration")
     print("-" * 40)
     
     print("\n💡 Key Points:")
@@ -144,6 +183,8 @@ def demo_tool_discovery():
     print("   • Each tool is a proxy instance with captured MCP client")
     print("   • Tools integrate seamlessly with existing registry")
     print("   • No DSPy dependency - clean, modular implementation")
+    print("   • Server provides real-time tool availability")
+    print("   • Tools can be added/removed on server without code changes")
     
     # Summary
     print(f"\n{'='*70}")

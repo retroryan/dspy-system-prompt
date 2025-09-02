@@ -6,7 +6,7 @@ const FEATURED_REAL_ESTATE_QUERIES = [
     icon: '🏡',
     title: 'Find Your Dream Home',
     text: 'Modern family homes with pools',
-    prompt: 'Find modern family homes with pools in Oakland under $800k',
+    prompt: 'Find a great family home in San Francisco',
     toolSet: 'real_estate_mcp'
   },
   {
