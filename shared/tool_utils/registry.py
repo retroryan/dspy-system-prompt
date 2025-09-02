@@ -1,10 +1,14 @@
 """Central registry for all tools adapted for agentic loop integration."""
 import time
-from typing import Dict, Type, Callable, List, Optional, Any
+from typing import Dict, Type, Callable, List, Optional, Any, TYPE_CHECKING
 import dspy
 from ..models import ToolExecutionResult, ToolCall
 from .base_tool import BaseTool
 from .base_tool_sets import ToolSet, ToolSetTestCase
+
+# Avoid circular imports
+if TYPE_CHECKING:
+    from agentic_loop.session import AgentSession
 
 
 class ToolRegistry:
@@ -101,25 +105,79 @@ class ToolRegistry:
                 parameters=tool_call.arguments
             )
     
+    def execute_tool_with_session(
+        self,
+        tool_name: str,
+        session: Optional['AgentSession'] = None,
+        **kwargs
+    ) -> Any:
+        """
+        Execute a tool with session context injection.
+        
+        This method handles session injection for tools that need user context,
+        following the strands pattern of passing context through invocation_state.
+        
+        Args:
+            tool_name: Name of the tool to execute
+            session: The agent session containing user context
+            **kwargs: Tool arguments
+            
+        Returns:
+            The result of the tool execution
+        """
+        tool = self.get_tool(tool_name)
+        if not tool:
+            return {"error": f"Unknown tool: {tool_name}"}
+        
+        # Add session to kwargs if tool accepts it
+        if hasattr(tool, '_accepts_session') and tool._accepts_session and session:
+            kwargs['session'] = session
+        
+        # Use validate_and_execute which handles session properly
+        return tool.validate_and_execute(**kwargs)
+    
     def register_tool_set(self, tool_set: ToolSet) -> None:
         """
-        Registers all tools from a tool set.
+        Registers all tools from a tool set and initializes the tool set.
+        
+        Supports both class-based tool sets (original) and instance-based
+        tool sets (for dynamic discovery like MCP).
         
         Args:
             tool_set: The tool set to register
         """
         self._tool_set = tool_set
-        for tool_class in tool_set.config.tool_classes:
-            tool_name = tool_class.NAME
+        
+        # Initialize the tool set (e.g., load test data, setup connections)
+        tool_set.initialize()
+        
+        # Check if tool set provides instances directly (dynamic tools)
+        if hasattr(tool_set, 'provides_instances') and tool_set.provides_instances():
+            # Instance-based registration (for MCP and other dynamic tools)
+            instances = tool_set.get_tool_instances()
+            for instance in instances:
+                tool_name = instance.name
+                
+                if tool_name in self._instances:
+                    raise ValueError(f"Tool '{tool_name}' is already registered.")
+                
+                # Store instance directly
+                self._instances[tool_name] = instance
+                # Also store in _tools for compatibility (using instance's class)
+                self._tools[tool_name] = instance.__class__
+        else:
+            # Class-based registration (original behavior)
+            for tool_class in tool_set.config.tool_classes:
+                tool_name = tool_class.NAME
 
-            if tool_name in self._tools:
-                raise ValueError(f"Tool '{tool_name}' is already registered.")
+                if tool_name in self._tools:
+                    raise ValueError(f"Tool '{tool_name}' is already registered.")
 
-            self._tools[tool_name] = tool_class
+                self._tools[tool_name] = tool_class
 
-            # Create and cache tool instance. Tools are Pydantic models.
-            instance = tool_class()
-            self._instances[tool_name] = instance
+                # Create and cache tool instance. Tools are Pydantic models.
+                instance = tool_class()
+                self._instances[tool_name] = instance
     
     def get_all_test_cases(self) -> List[ToolSetTestCase]:
         """

@@ -1,0 +1,254 @@
+{
+  "products": [
+    {
+      "id": "KB123",
+      "name": "Gaming Mechanical Keyboard RGB",
+      "category": "Electronics",
+      "subcategory": "Keyboards",
+      "price": 129.99,
+      "rating": 4.5,
+      "stock": 45,
+      "description": "High-performance mechanical keyboard with RGB backlighting"
+    },
+    {
+      "id": "KB456",
+      "name": "Wireless Gaming Keyboard",
+      "category": "Electronics",
+      "subcategory": "Keyboards",
+      "price": 89.99,
+      "rating": 4.2,
+      "stock": 67,
+      "description": "Wireless keyboard with low-latency gaming mode"
+    },
+    {
+      "id": "KB789",
+      "name": "Pro Gaming Keyboard",
+      "category": "Electronics",
+      "subcategory": "Keyboards",
+      "price": 149.99,
+      "rating": 4.8,
+      "stock": 23,
+      "description": "Professional gaming keyboard with hot-swappable switches"
+    },
+    {
+      "id": "LP001",
+      "name": "Gaming Laptop 15-inch",
+      "category": "Electronics",
+      "subcategory": "Laptops",
+      "price": 899.99,
+      "rating": 4.3,
+      "stock": 12,
+      "description": "15-inch gaming laptop with RTX graphics"
+    },
+    {
+      "id": "LP002",
+      "name": "Business Laptop",
+      "category": "Electronics",
+      "subcategory": "Laptops",
+      "price": 649.99,
+      "rating": 4.1,
+      "stock": 34,
+      "description": "Lightweight business laptop with all-day battery"
+    },
+    {
+      "id": "MS001",
+      "name": "Wireless Gaming Mouse",
+      "category": "Electronics",
+      "subcategory": "Mice",
+      "price": 79.99,
+      "rating": 4.6,
+      "stock": 89,
+      "description": "High-precision wireless gaming mouse with RGB"
+    },
+    {
+      "id": "MS002",
+      "name": "Ergonomic Office Mouse",
+      "category": "Electronics",
+      "subcategory": "Mice",
+      "price": 34.99,
+      "rating": 4.0,
+      "stock": 156,
+      "description": "Comfortable ergonomic mouse for office use"
+    },
+    {
+      "id": "HD001",
+      "name": "Wireless Headphones Pro",
+      "category": "Electronics",
+      "subcategory": "Audio",
+      "price": 249.99,
+      "rating": 4.7,
+      "stock": 28,
+      "description": "Premium noise-cancelling wireless headphones"
+    },
+    {
+      "id": "HD002",
+      "name": "Sport Earbuds",
+      "category": "Electronics",
+      "subcategory": "Audio",
+      "price": 89.99,
+      "rating": 4.3,
+      "stock": 102,
+      "description": "Water-resistant sport earbuds with secure fit"
+    },
+    {
+      "id": "MT001",
+      "name": "27-inch Gaming Monitor",
+      "category": "Electronics",
+      "subcategory": "Monitors",
+      "price": 399.99,
+      "rating": 4.5,
+      "stock": 19,
+      "description": "144Hz gaming monitor with 1ms response time"
+    },
+    {
+      "id": "MT002",
+      "name": "4K Professional Monitor",
+      "category": "Electronics",
+      "subcategory": "Monitors",
+      "price": 599.99,
+      "rating": 4.6,
+      "stock": 14,
+      "description": "32-inch 4K monitor for creative professionals"
+    },
+    {
+      "id": "WC001",
+      "name": "HD Webcam",
+      "category": "Electronics",
+      "subcategory": "Accessories",
+      "price": 69.99,
+      "rating": 4.2,
+      "stock": 87,
+      "description": "1080p HD webcam with auto-focus"
+    },
+    {
+      "id": "SP001",
+      "name": "Bluetooth Speaker",
+      "category": "Electronics",
+      "subcategory": "Audio",
+      "price": 49.99,
+      "rating": 4.4,
+      "stock": 143,
+      "description": "Portable Bluetooth speaker with 12-hour battery"
+    },
+    {
+      "id": "TB001",
+      "name": "10-inch Tablet",
+      "category": "Electronics",
+      "subcategory": "Tablets",
+      "price": 299.99,
+      "rating": 4.1,
+      "stock": 36,
+      "description": "10-inch tablet with stylus support"
+    },
+    {
+      "id": "CH001",
+      "name": "Ergonomic Office Chair",
+      "category": "Furniture",
+      "subcategory": "Chairs",
+      "price": 399.99,
+      "rating": 4.5,
+      "stock": 22,
+      "description": "Adjustable ergonomic office chair with lumbar support"
+    },
+    {
+      "id": "DK001",
+      "name": "Standing Desk",
+      "category": "Furniture",
+      "subcategory": "Desks",
+      "price": 499.99,
+      "rating": 4.6,
+      "stock": 8,
+      "description": "Electric height-adjustable standing desk"
+    },
+    {
+      "id": "PH001",
+      "name": "Smartphone Pro Max",
+      "category": "Electronics",
+      "subcategory": "Phones",
+      "price": 1099.99,
+      "rating": 4.7,
+      "stock": 54,
+      "description": "Latest flagship smartphone with pro camera system"
+    },
+    {
+      "id": "PH002",
+      "name": "Budget Smartphone",
+      "category": "Electronics",
+      "subcategory": "Phones",
+      "price": 199.99,
+      "rating": 3.9,
+      "stock": 201,
+      "description": "Affordable smartphone with essential features"
+    },
+    {
+      "id": "CB001",
+      "name": "USB-C Cable 6ft",
+      "category": "Electronics",
+      "subcategory": "Accessories",
+      "price": 14.99,
+      "rating": 4.3,
+      "stock": 456,
+      "description": "Fast charging USB-C cable, 6 feet"
+    },
+    {
+      "id": "PB001",
+      "name": "20000mAh Power Bank",
+      "category": "Electronics",
+      "subcategory": "Accessories",
+      "price": 39.99,
+      "rating": 4.4,
+      "stock": 178,
+      "description": "High-capacity power bank with fast charging"
+    },
+    {
+      "id": "SD001",
+      "name": "1TB SSD External Drive",
+      "category": "Electronics",
+      "subcategory": "Storage",
+      "price": 89.99,
+      "rating": 4.5,
+      "stock": 93,
+      "description": "Portable 1TB SSD with USB-C connection"
+    },
+    {
+      "id": "RT001",
+      "name": "WiFi 6 Router",
+      "category": "Electronics",
+      "subcategory": "Networking",
+      "price": 149.99,
+      "rating": 4.3,
+      "stock": 41,
+      "description": "High-speed WiFi 6 router for gaming and streaming"
+    },
+    {
+      "id": "CS001",
+      "name": "Laptop Case 15-inch",
+      "category": "Accessories",
+      "subcategory": "Cases",
+      "price": 29.99,
+      "rating": 4.2,
+      "stock": 234,
+      "description": "Protective laptop case with extra pockets"
+    },
+    {
+      "id": "MP001",
+      "name": "Mouse Pad XXL",
+      "category": "Accessories",
+      "subcategory": "Gaming",
+      "price": 24.99,
+      "rating": 4.4,
+      "stock": 312,
+      "description": "Extra large gaming mouse pad with RGB edges"
+    },
+    {
+      "id": "CC001",
+      "name": "Coffee Maker Smart",
+      "category": "Home",
+      "subcategory": "Kitchen",
+      "price": 179.99,
+      "rating": 4.3,
+      "stock": 67,
+      "description": "Smart coffee maker with app control"
+    }
+  ]
+}

@@ -1,10 +1,13 @@
 """Get order tool implementation using the unified base class."""
-import json
-from pathlib import Path
-from typing import List, ClassVar, Dict, Any, Type
+from typing import List, ClassVar, Type, Optional, TYPE_CHECKING
 from pydantic import BaseModel, Field
 
 from shared.tool_utils.base_tool import BaseTool, ToolTestCase
+from .cart_inventory_manager import CartInventoryManager
+from .models import Order
+
+if TYPE_CHECKING:
+    from agentic_loop.session import AgentSession
 
 
 class GetOrderTool(BaseTool):
@@ -12,6 +15,7 @@ class GetOrderTool(BaseTool):
     
     NAME: ClassVar[str] = "get_order"
     MODULE: ClassVar[str] = "tools.ecommerce.get_order"
+    _accepts_session: ClassVar[bool] = True  # This tool needs user context
     
     class Arguments(BaseModel):
         """Argument validation model."""
@@ -25,23 +29,29 @@ class GetOrderTool(BaseTool):
     description: str = "Get order details by order ID"
     args_model: Type[BaseModel] = Arguments
     
-    def execute(self, order_id: str) -> Dict[str, Any]:
+    def execute(self, **kwargs) -> dict:
         """Execute the tool to get order details."""
-        file_path = (
-            Path(__file__).resolve().parent.parent / "data" / "customer_order_data.json"
-        )
-        if not file_path.exists():
-            return {"error": "Data file not found."}
-
-        with open(file_path, "r") as file:
-            data = json.load(file)
-        order_list = data["orders"]
-
-        for order in order_list:
-            if order["id"] == order_id:
-                return order
-
-        return {"error": f"Order {order_id} not found."}
+        # Extract session from kwargs
+        session: Optional['AgentSession'] = kwargs.pop('session', None)
+        
+        # Check for required session and user_id
+        if not session or not session.user_id:
+            return {"error": "User session required to get order details"}
+        
+        # Get order_id from kwargs
+        order_id = kwargs.get('order_id')
+        
+        # Use CartInventoryManager for operations
+        manager = CartInventoryManager()
+        
+        # Get order using the manager
+        result = manager.get_order(session.user_id, order_id)
+        
+        # Check if result is an Order model or a dict with error
+        if isinstance(result, Order):
+            return result.model_dump(exclude_none=True)
+        else:
+            return result
     
     @classmethod
     def get_test_cases(cls) -> List[ToolTestCase]:

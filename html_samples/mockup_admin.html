@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSPy Agent - Admin Settings</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+        }
+        
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 2rem 1rem;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 3rem;
+            padding: 0 1rem;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .nav-menu {
+            list-style: none;
+        }
+        
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .nav-link:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+        
+        .nav-link.active {
+            background: #eff6ff;
+            color: var(--primary);
+            font-weight: 500;
+        }
+        
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 2rem 3rem;
+        }
+        
+        .page-header {
+            margin-bottom: 2rem;
+        }
+        
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+        
+        .health-status {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .health-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .health-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        
+        .health-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .health-badge.warning {
+            background: #fed7aa;
+            color: #92400e;
+        }
+        
+        .health-badge.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .health-item {
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        
+        .health-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .health-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .settings-section {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+        
+        .settings-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+        
+        .setting-item {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            align-items: center;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .setting-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        
+        .setting-label {
+            font-weight: 500;
+        }
+        
+        .setting-description {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+        
+        .setting-control {
+            justify-self: end;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        select {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: var(--primary);
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text-primary);
+            border: 2px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            background: #f8fafc;
+            border-color: var(--primary);
+        }
+        
+        .btn-danger {
+            background: var(--error);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+        
+        .logs-section {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+        
+        .log-viewer {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.875rem;
+            max-height: 200px;
+            overflow-y: auto;
+            color: #e2e8f0;
+        }
+        
+        .log-line {
+            margin-bottom: 0.25rem;
+        }
+        
+        .log-time {
+            color: #94a3b8;
+        }
+        
+        .log-level {
+            padding: 0.125rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            margin: 0 0.5rem;
+        }
+        
+        .log-level.info {
+            background: #1e40af;
+            color: #dbeafe;
+        }
+        
+        .log-level.warning {
+            background: #a16207;
+            color: #fef3c7;
+        }
+        
+        .log-level.error {
+            background: #991b1b;
+            color: #fee2e2;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">D</div>
+                <div class="logo-text">DSPy Agent</div>
+            </div>
+            
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Chatbot')">
+                            <span class="nav-icon">💬</span>
+                            <span>Chatbot</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Dashboard')">
+                            <span class="nav-icon">🏠</span>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Demos')">
+                            <span class="nav-icon">🚀</span>
+                            <span>Demos</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link active" onclick="alert('Admin Settings (current)')">
+                            <span class="nav-icon">⚙️</span>
+                            <span>Admin Settings</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Advanced Chatbot')">
+                            <span class="nav-icon">🤖</span>
+                            <span>Advanced</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to About page')">
+                            <span class="nav-icon">ℹ️</span>
+                            <span>About</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">Admin Settings</h1>
+                <p class="page-subtitle">System configuration and health monitoring</p>
+            </header>
+            
+            <!-- System Health Status -->
+            <div class="health-status">
+                <div class="health-header">
+                    <h2 class="health-title">System Health</h2>
+                    <span class="health-badge">All Systems Operational</span>
+                </div>
+                <div class="health-grid">
+                    <div class="health-item">
+                        <div class="health-label">API Status</div>
+                        <div class="health-value">✅ Online</div>
+                    </div>
+                    <div class="health-item">
+                        <div class="health-label">LLM Provider</div>
+                        <div class="health-value">Ollama</div>
+                    </div>
+                    <div class="health-item">
+                        <div class="health-label">Model</div>
+                        <div class="health-value">gemma3:27b</div>
+                    </div>
+                    <div class="health-item">
+                        <div class="health-label">Response Time</div>
+                        <div class="health-value">1.2s avg</div>
+                    </div>
+                    <div class="health-item">
+                        <div class="health-label">Memory Usage</div>
+                        <div class="health-value">45%</div>
+                    </div>
+                    <div class="health-item">
+                        <div class="health-label">Active Tools</div>
+                        <div class="health-value">12 / 12</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- LLM Configuration -->
+            <div class="settings-section">
+                <h2 class="section-title">LLM Configuration</h2>
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">Provider</div>
+                            <div class="setting-description">Select the LLM provider to use</div>
+                        </div>
+                        <div class="setting-control">
+                            <select>
+                                <option value="ollama" selected>Ollama</option>
+                                <option value="claude">Claude</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="gemini">Gemini</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">Model</div>
+                            <div class="setting-description">Specify the model to use</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="text" value="gemma3:27b">
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">Temperature</div>
+                            <div class="setting-description">Control randomness (0.0-1.0)</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="number" value="0.7" min="0" max="1" step="0.1">
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">Max Tokens</div>
+                            <div class="setting-description">Maximum response length</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="number" value="1024" min="100" max="4096">
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">Debug Mode</div>
+                            <div class="setting-description">Enable verbose logging</div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="saveSettings()">Save Changes</button>
+                    <button class="btn btn-secondary" onclick="resetSettings()">Reset to Default</button>
+                </div>
+            </div>
+            
+            <!-- Agent Configuration -->
+            <div class="settings-section">
+                <h2 class="section-title">Agent Configuration</h2>
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">Max Iterations</div>
+                            <div class="setting-description">Maximum loop iterations per query</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="number" value="10" min="1" max="50">
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">Memory Window</div>
+                            <div class="setting-description">Conversation history size</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="number" value="5" min="1" max="20">
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">Tool Timeout</div>
+                            <div class="setting-description">Maximum tool execution time (seconds)</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="number" value="30" min="5" max="120">
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">Auto-retry Failed Tools</div>
+                            <div class="setting-description">Automatically retry failed tool executions</div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- System Logs -->
+            <div class="logs-section">
+                <div class="health-header">
+                    <h2 class="section-title">System Logs</h2>
+                    <div>
+                        <button class="btn btn-secondary" onclick="refreshLogs()">Refresh</button>
+                        <button class="btn btn-danger" onclick="clearLogs()" style="margin-left: 0.5rem;">Clear Logs</button>
+                    </div>
+                </div>
+                <div class="log-viewer">
+                    <div class="log-line">
+                        <span class="log-time">[2024-01-20 14:32:15]</span>
+                        <span class="log-level info">INFO</span>
+                        <span>System initialized successfully</span>
+                    </div>
+                    <div class="log-line">
+                        <span class="log-time">[2024-01-20 14:32:16]</span>
+                        <span class="log-level info">INFO</span>
+                        <span>Loading Ollama provider with model gemma3:27b</span>
+                    </div>
+                    <div class="log-line">
+                        <span class="log-time">[2024-01-20 14:32:18]</span>
+                        <span class="log-level info">INFO</span>
+                        <span>All tools registered successfully (12 tools)</span>
+                    </div>
+                    <div class="log-line">
+                        <span class="log-time">[2024-01-20 14:33:01]</span>
+                        <span class="log-level info">INFO</span>
+                        <span>AgentSession created for ecommerce domain</span>
+                    </div>
+                    <div class="log-line">
+                        <span class="log-time">[2024-01-20 14:33:05]</span>
+                        <span class="log-level warning">WARNING</span>
+                        <span>Response time exceeded threshold (2.1s)</span>
+                    </div>
+                    <div class="log-line">
+                        <span class="log-time">[2024-01-20 14:33:45]</span>
+                        <span class="log-level info">INFO</span>
+                        <span>Demo completed: 22/22 test cases passed</span>
+                    </div>
+                    <div class="log-line">
+                        <span class="log-time">[2024-01-20 14:34:12]</span>
+                        <span class="log-level info">INFO</span>
+                        <span>Memory cache cleared successfully</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        function saveSettings() {
+            alert('Settings saved successfully!');
+        }
+        
+        function resetSettings() {
+            if (confirm('Are you sure you want to reset all settings to default?')) {
+                alert('Settings reset to default values');
+            }
+        }
+        
+        function refreshLogs() {
+            alert('Logs refreshed');
+        }
+        
+        function clearLogs() {
+            if (confirm('Are you sure you want to clear all logs?')) {
+                alert('Logs cleared');
+            }
+        }
+    </script>
+</body>
+</html>

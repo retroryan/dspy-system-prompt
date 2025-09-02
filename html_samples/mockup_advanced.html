@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSPy Agent - Advanced Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+        }
+        
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 2rem 1rem;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 3rem;
+            padding: 0 1rem;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .nav-menu {
+            list-style: none;
+        }
+        
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .nav-link:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+        
+        .nav-link.active {
+            background: #eff6ff;
+            color: var(--primary);
+            font-weight: 500;
+        }
+        
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            gap: 2rem;
+            padding: 2rem;
+        }
+        
+        .chat-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+        
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+        
+        .chat-container {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .message {
+            display: flex;
+            gap: 1rem;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message.user {
+            flex-direction: row-reverse;
+        }
+        
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+        .message.agent .message-avatar {
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            color: white;
+        }
+        
+        .message.user .message-avatar {
+            background: #f3f4f6;
+            color: var(--text-primary);
+        }
+        
+        .message-content {
+            max-width: 70%;
+        }
+        
+        .message-bubble {
+            padding: 1rem;
+            border-radius: 12px;
+            line-height: 1.5;
+        }
+        
+        .message.agent .message-bubble {
+            background: #f1f5f9;
+            color: var(--text-primary);
+        }
+        
+        .message.user .message-bubble {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .message-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+        
+        .message.user .message-time {
+            text-align: right;
+        }
+        
+        .chat-input-container {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+            background: #f8fafc;
+        }
+        
+        .chat-input-wrapper {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            resize: none;
+            font-family: inherit;
+        }
+        
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .send-btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .send-btn:hover {
+            background: var(--primary-dark);
+        }
+        
+        .loop-visualization {
+            width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .loop-card {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+        
+        .loop-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .loop-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        
+        .loop-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .loop-status.active {
+            background: #dbeafe;
+            color: #1e40af;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .loop-status.idle {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+        
+        .loop-steps {
+            list-style: none;
+        }
+        
+        .loop-step {
+            display: flex;
+            align-items: start;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-left: 2px solid var(--border);
+            margin-left: 0.5rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+        
+        .loop-step:before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 1rem;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--border);
+        }
+        
+        .loop-step.active:before {
+            background: var(--primary);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+        }
+        
+        .loop-step.completed:before {
+            background: var(--success);
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-label {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        
+        .step-description {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .tools-panel {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+        
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        
+        .tool-item {
+            padding: 0.5rem;
+            background: #f8fafc;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .tool-item.active {
+            background: #eff6ff;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .tool-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .metrics-panel {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+        
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .metric-item:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .metric-value {
+            font-weight: 600;
+        }
+        
+        .thinking-indicator {
+            display: flex;
+            gap: 0.25rem;
+            padding: 0.5rem;
+        }
+        
+        .thinking-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: thinking 1.4s ease-in-out infinite;
+        }
+        
+        .thinking-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .thinking-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes thinking {
+            0%, 60%, 100% {
+                transform: scale(1);
+                opacity: 0.3;
+            }
+            30% {
+                transform: scale(1.3);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">D</div>
+                <div class="logo-text">DSPy Agent</div>
+            </div>
+            
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Chatbot')">
+                            <span class="nav-icon">💬</span>
+                            <span>Chatbot</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Dashboard')">
+                            <span class="nav-icon">🏠</span>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Demos')">
+                            <span class="nav-icon">🚀</span>
+                            <span>Demos</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Admin Settings')">
+                            <span class="nav-icon">⚙️</span>
+                            <span>Admin Settings</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link active" onclick="alert('Advanced (current)')">
+                            <span class="nav-icon">🤖</span>
+                            <span>Advanced</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to About page')">
+                            <span class="nav-icon">ℹ️</span>
+                            <span>About</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Chat Section -->
+            <div class="chat-section">
+                <header class="page-header">
+                    <h1 class="page-title">Advanced Chatbot</h1>
+                    <p class="page-subtitle">Interactive agent with real-time loop visualization</p>
+                </header>
+                
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <!-- Agent Message -->
+                        <div class="message agent">
+                            <div class="message-avatar">AI</div>
+                            <div class="message-content">
+                                <div class="message-bubble">
+                                    Hello! I'm your DSPy Agent. I can help you with various tasks using my available tools. What would you like to explore today?
+                                </div>
+                                <div class="message-time">2 minutes ago</div>
+                            </div>
+                        </div>
+                        
+                        <!-- User Message -->
+                        <div class="message user">
+                            <div class="message-avatar">U</div>
+                            <div class="message-content">
+                                <div class="message-bubble">
+                                    Can you help me find the best laptop under $1000?
+                                </div>
+                                <div class="message-time">1 minute ago</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Agent Thinking -->
+                        <div class="message agent">
+                            <div class="message-avatar">AI</div>
+                            <div class="message-content">
+                                <div class="message-bubble">
+                                    I'll help you find the best laptop under $1000. Let me search through our product catalog and analyze the options based on your budget.
+                                    
+                                    <div style="margin-top: 1rem; padding: 1rem; background: #f8fafc; border-radius: 8px;">
+                                        <strong>🔍 Searching products...</strong><br>
+                                        Found 15 laptops in your price range<br><br>
+                                        
+                                        <strong>Top recommendations:</strong><br>
+                                        1. <strong>ThinkPad E14</strong> - $899<br>
+                                        &nbsp;&nbsp;&nbsp;• Intel Core i5, 8GB RAM, 256GB SSD<br>
+                                        &nbsp;&nbsp;&nbsp;• Great for business and productivity<br><br>
+                                        
+                                        2. <strong>ASUS VivoBook 15</strong> - $749<br>
+                                        &nbsp;&nbsp;&nbsp;• AMD Ryzen 5, 12GB RAM, 512GB SSD<br>
+                                        &nbsp;&nbsp;&nbsp;• Best value for performance<br><br>
+                                        
+                                        3. <strong>HP Pavilion 15</strong> - $999<br>
+                                        &nbsp;&nbsp;&nbsp;• Intel Core i7, 16GB RAM, 512GB SSD<br>
+                                        &nbsp;&nbsp;&nbsp;• Maximum specs at your budget
+                                    </div>
+                                </div>
+                                <div class="message-time">Just now</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-input-container">
+                        <div class="chat-input-wrapper">
+                            <textarea class="chat-input" placeholder="Type your message..." rows="1"></textarea>
+                            <button class="send-btn" onclick="sendMessage()">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Loop Visualization Panel -->
+            <div class="loop-visualization">
+                <!-- React Loop Status -->
+                <div class="loop-card">
+                    <div class="loop-header">
+                        <h3 class="loop-title">React Loop</h3>
+                        <span class="loop-status active">ACTIVE</span>
+                    </div>
+                    <ul class="loop-steps">
+                        <li class="loop-step completed">
+                            <div class="step-content">
+                                <div class="step-label">Receive Query</div>
+                                <div class="step-description">User asked about laptops under $1000</div>
+                            </div>
+                        </li>
+                        <li class="loop-step completed">
+                            <div class="step-content">
+                                <div class="step-label">Thought Generation</div>
+                                <div class="step-description">Need to search product catalog</div>
+                            </div>
+                        </li>
+                        <li class="loop-step active">
+                            <div class="step-content">
+                                <div class="step-label">Tool Selection</div>
+                                <div class="step-description">Using ProductSearchTool</div>
+                            </div>
+                        </li>
+                        <li class="loop-step">
+                            <div class="step-content">
+                                <div class="step-label">Execute Action</div>
+                                <div class="step-description">Waiting...</div>
+                            </div>
+                        </li>
+                        <li class="loop-step">
+                            <div class="step-content">
+                                <div class="step-label">Process Result</div>
+                                <div class="step-description">Pending...</div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- Available Tools -->
+                <div class="tools-panel">
+                    <h3 class="loop-title">Available Tools</h3>
+                    <div class="tools-grid">
+                        <div class="tool-item active">
+                            <span class="tool-icon">🔍</span>
+                            <span>Product Search</span>
+                        </div>
+                        <div class="tool-item">
+                            <span class="tool-icon">🛒</span>
+                            <span>Cart Manager</span>
+                        </div>
+                        <div class="tool-item">
+                            <span class="tool-icon">📦</span>
+                            <span>Order History</span>
+                        </div>
+                        <div class="tool-item">
+                            <span class="tool-icon">⚙️</span>
+                            <span>Price Compare</span>
+                        </div>
+                        <div class="tool-item">
+                            <span class="tool-icon">🌤️</span>
+                            <span>Weather API</span>
+                        </div>
+                        <div class="tool-item">
+                            <span class="tool-icon">📊</span>
+                            <span>Analytics</span>
+                        </div>
+                        <div class="tool-item">
+                            <span class="tool-icon">📝</span>
+                            <span>Note Taker</span>
+                        </div>
+                        <div class="tool-item">
+                            <span class="tool-icon">🔔</span>
+                            <span>Notifications</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Metrics -->
+                <div class="metrics-panel">
+                    <h3 class="loop-title">Performance Metrics</h3>
+                    <div class="metric-item">
+                        <span class="metric-label">Response Time</span>
+                        <span class="metric-value">1.2s</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Iterations</span>
+                        <span class="metric-value">3 / 10</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Tools Used</span>
+                        <span class="metric-value">1</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Context Size</span>
+                        <span class="metric-value">524 tokens</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Memory Usage</span>
+                        <span class="metric-value">12.3 MB</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        function sendMessage() {
+            const input = document.querySelector('.chat-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            const messagesContainer = document.getElementById('chatMessages');
+            
+            // Add user message
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user';
+            userMessage.innerHTML = `
+                <div class="message-avatar">U</div>
+                <div class="message-content">
+                    <div class="message-bubble">${message}</div>
+                    <div class="message-time">Just now</div>
+                </div>
+            `;
+            messagesContainer.appendChild(userMessage);
+            
+            // Clear input
+            input.value = '';
+            
+            // Add thinking indicator
+            setTimeout(() => {
+                const thinkingMessage = document.createElement('div');
+                thinkingMessage.className = 'message agent';
+                thinkingMessage.innerHTML = `
+                    <div class="message-avatar">AI</div>
+                    <div class="message-content">
+                        <div class="message-bubble">
+                            <div class="thinking-indicator">
+                                <div class="thinking-dot"></div>
+                                <div class="thinking-dot"></div>
+                                <div class="thinking-dot"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                messagesContainer.appendChild(thinkingMessage);
+                
+                // Simulate response after delay
+                setTimeout(() => {
+                    thinkingMessage.innerHTML = `
+                        <div class="message-avatar">AI</div>
+                        <div class="message-content">
+                            <div class="message-bubble">
+                                I understand your request. Let me process that for you using the appropriate tools from my toolkit. (This is a mockup demonstration)
+                            </div>
+                            <div class="message-time">Just now</div>
+                        </div>
+                    `;
+                }, 2000);
+            }, 500);
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // Allow Enter key to send message
+        document.querySelector('.chat-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

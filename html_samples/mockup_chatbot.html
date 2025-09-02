@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSPy Agent - Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+        }
+        
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 2rem 1rem;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 3rem;
+            padding: 0 1rem;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .nav-menu {
+            list-style: none;
+        }
+        
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .nav-link:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+        
+        .nav-link.active {
+            background: #eff6ff;
+            color: var(--primary);
+            font-weight: 500;
+        }
+        
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .page-header {
+            margin-bottom: 2rem;
+        }
+        
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+        
+        .chat-wrapper {
+            display: flex;
+            gap: 2rem;
+            flex: 1;
+            min-height: 0;
+        }
+        
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-container {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .message {
+            display: flex;
+            gap: 1rem;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message.user {
+            flex-direction: row-reverse;
+        }
+        
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+        .message.agent .message-avatar {
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            color: white;
+        }
+        
+        .message.user .message-avatar {
+            background: #e5e7eb;
+            color: var(--text-primary);
+        }
+        
+        .message-content {
+            max-width: 70%;
+        }
+        
+        .message-bubble {
+            padding: 1rem 1.25rem;
+            border-radius: 16px;
+            line-height: 1.6;
+        }
+        
+        .message.agent .message-bubble {
+            background: #f3f4f6;
+            color: var(--text-primary);
+        }
+        
+        .message.user .message-bubble {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .message-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            padding: 0 0.5rem;
+        }
+        
+        .message.user .message-time {
+            text-align: right;
+        }
+        
+        .chat-input-container {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+            background: #fafbfc;
+        }
+        
+        .input-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .input-chip {
+            padding: 0.375rem 0.75rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .input-chip:hover {
+            background: #f8fafc;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .chat-input-wrapper {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 0.875rem 1.25rem;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 1rem;
+            resize: none;
+            font-family: inherit;
+            line-height: 1.5;
+            transition: all 0.2s;
+        }
+        
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: var(--surface);
+        }
+        
+        .send-btn {
+            padding: 0.875rem 1.75rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .send-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .sidebar-panel {
+            width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .panel-card {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+        
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .panel-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        
+        .panel-badge {
+            padding: 0.25rem 0.75rem;
+            background: #f3f4f6;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        
+        .panel-badge.active {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+        
+        .quick-action {
+            padding: 0.75rem;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .quick-action:hover {
+            background: var(--surface);
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .action-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .action-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .context-info {
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .context-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            font-size: 0.875rem;
+        }
+        
+        .context-label {
+            color: var(--text-secondary);
+        }
+        
+        .context-value {
+            font-weight: 500;
+        }
+        
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .history-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .history-item:hover {
+            background: #f8fafc;
+        }
+        
+        .history-item:last-child {
+            border-bottom: none;
+        }
+        
+        .history-query {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .history-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .welcome-message {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+        
+        .welcome-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .welcome-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .welcome-text {
+            max-width: 500px;
+            margin: 0 auto 2rem;
+            line-height: 1.6;
+        }
+        
+        .suggested-prompts {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .prompt-card {
+            padding: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        
+        .prompt-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .prompt-icon {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .prompt-text {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        
+        .thinking-indicator {
+            display: flex;
+            gap: 0.25rem;
+            padding: 0.5rem;
+        }
+        
+        .thinking-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: thinking 1.4s ease-in-out infinite;
+        }
+        
+        .thinking-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .thinking-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes thinking {
+            0%, 60%, 100% {
+                transform: scale(1);
+                opacity: 0.3;
+            }
+            30% {
+                transform: scale(1.3);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">D</div>
+                <div class="logo-text">DSPy Agent</div>
+            </div>
+            
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="#" class="nav-link active" onclick="alert('Chatbot (current)')">
+                            <span class="nav-icon">💬</span>
+                            <span>Chatbot</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Dashboard')">
+                            <span class="nav-icon">🏠</span>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Demos')">
+                            <span class="nav-icon">🚀</span>
+                            <span>Demos</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Admin Settings')">
+                            <span class="nav-icon">⚙️</span>
+                            <span>Admin Settings</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to Advanced Chatbot')">
+                            <span class="nav-icon">🤖</span>
+                            <span>Advanced</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="alert('Navigate to About page')">
+                            <span class="nav-icon">ℹ️</span>
+                            <span>About</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">Chatbot</h1>
+                <p class="page-subtitle">Interact with the DSPy Agent System</p>
+            </header>
+            
+            <div class="chat-wrapper">
+                <!-- Main Chat Area -->
+                <div class="chat-main">
+                    <div class="chat-container">
+                        <div class="chat-messages" id="chatMessages">
+                            <!-- Welcome Message -->
+                            <div class="welcome-message">
+                                <div class="welcome-icon">🤖</div>
+                                <h2 class="welcome-title">Welcome to DSPy Agent</h2>
+                                <p class="welcome-text">
+                                    I'm here to help you with various tasks using my comprehensive toolkit. 
+                                    Choose a suggestion below or type your own question to get started.
+                                </p>
+                                <div class="suggested-prompts">
+                                    <div class="prompt-card" onclick="sendSuggestedPrompt('Show me the weather forecast for next week')">
+                                        <div class="prompt-icon">🌤️</div>
+                                        <div class="prompt-text">Get weather forecast and recommendations</div>
+                                    </div>
+                                    <div class="prompt-card" onclick="sendSuggestedPrompt('Help me find a laptop under $1000')">
+                                        <div class="prompt-icon">💻</div>
+                                        <div class="prompt-text">Search for products and compare prices</div>
+                                    </div>
+                                    <div class="prompt-card" onclick="sendSuggestedPrompt('What crops should I plant this season?')">
+                                        <div class="prompt-icon">🌾</div>
+                                        <div class="prompt-text">Get agricultural recommendations</div>
+                                    </div>
+                                    <div class="prompt-card" onclick="sendSuggestedPrompt('Show me my recent orders')">
+                                        <div class="prompt-icon">📦</div>
+                                        <div class="prompt-text">View order history and status</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="chat-input-container">
+                            <div class="input-actions">
+                                <div class="input-chip" onclick="insertCommand('/help')">📚 Help</div>
+                                <div class="input-chip" onclick="insertCommand('/clear')">🗑️ Clear</div>
+                                <div class="input-chip" onclick="insertCommand('/export')">💾 Export</div>
+                                <div class="input-chip" onclick="insertCommand('/tools')">🔧 Tools</div>
+                            </div>
+                            <div class="chat-input-wrapper">
+                                <textarea class="chat-input" id="chatInput" placeholder="Ask me anything..." rows="1"></textarea>
+                                <button class="send-btn" onclick="sendMessage()">
+                                    <span>Send</span>
+                                    <span>→</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Sidebar Panel -->
+                <div class="sidebar-panel">
+                    <!-- Quick Actions -->
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3 class="panel-title">Quick Actions</h3>
+                        </div>
+                        <div class="quick-actions">
+                            <div class="quick-action" onclick="runQuickAction('demo')">
+                                <div class="action-icon">🚀</div>
+                                <div class="action-label">Run Demo</div>
+                            </div>
+                            <div class="quick-action" onclick="runQuickAction('test')">
+                                <div class="action-icon">🧪</div>
+                                <div class="action-label">Run Tests</div>
+                            </div>
+                            <div class="quick-action" onclick="runQuickAction('weather')">
+                                <div class="action-icon">🌤️</div>
+                                <div class="action-label">Weather</div>
+                            </div>
+                            <div class="quick-action" onclick="runQuickAction('search')">
+                                <div class="action-icon">🔍</div>
+                                <div class="action-label">Search</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Context Information -->
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3 class="panel-title">Session Context</h3>
+                            <span class="panel-badge active">ACTIVE</span>
+                        </div>
+                        <div class="context-info">
+                            <div class="context-item">
+                                <span class="context-label">Session ID</span>
+                                <span class="context-value">#A3F2</span>
+                            </div>
+                            <div class="context-item">
+                                <span class="context-label">Messages</span>
+                                <span class="context-value">0</span>
+                            </div>
+                            <div class="context-item">
+                                <span class="context-label">Duration</span>
+                                <span class="context-value">0m</span>
+                            </div>
+                            <div class="context-item">
+                                <span class="context-label">Model</span>
+                                <span class="context-value">gemma3:27b</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recent History -->
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3 class="panel-title">Recent Conversations</h3>
+                        </div>
+                        <div class="history-list">
+                            <div class="history-item" onclick="loadConversation(1)">
+                                <div class="history-query">Compare weather in Tokyo and Paris</div>
+                                <div class="history-time">2 hours ago</div>
+                            </div>
+                            <div class="history-item" onclick="loadConversation(2)">
+                                <div class="history-query">Find laptops under $1000</div>
+                                <div class="history-time">Yesterday</div>
+                            </div>
+                            <div class="history-item" onclick="loadConversation(3)">
+                                <div class="history-query">Crop recommendations for spring</div>
+                                <div class="history-time">2 days ago</div>
+                            </div>
+                            <div class="history-item" onclick="loadConversation(4)">
+                                <div class="history-query">Track order #12345</div>
+                                <div class="history-time">3 days ago</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        let messageCount = 0;
+        const startTime = Date.now();
+        
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            const messagesContainer = document.getElementById('chatMessages');
+            
+            // Remove welcome message if it exists
+            const welcomeMsg = messagesContainer.querySelector('.welcome-message');
+            if (welcomeMsg) {
+                welcomeMsg.remove();
+            }
+            
+            // Add user message
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user';
+            userMessage.innerHTML = `
+                <div class="message-avatar">U</div>
+                <div class="message-content">
+                    <div class="message-bubble">${escapeHtml(message)}</div>
+                    <div class="message-time">Just now</div>
+                </div>
+            `;
+            messagesContainer.appendChild(userMessage);
+            
+            // Update message count
+            messageCount++;
+            updateContext();
+            
+            // Clear input
+            input.value = '';
+            input.style.height = 'auto';
+            
+            // Add thinking indicator
+            setTimeout(() => {
+                const thinkingMessage = document.createElement('div');
+                thinkingMessage.className = 'message agent';
+                thinkingMessage.id = 'thinking-message';
+                thinkingMessage.innerHTML = `
+                    <div class="message-avatar">AI</div>
+                    <div class="message-content">
+                        <div class="message-bubble">
+                            <div class="thinking-indicator">
+                                <div class="thinking-dot"></div>
+                                <div class="thinking-dot"></div>
+                                <div class="thinking-dot"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                messagesContainer.appendChild(thinkingMessage);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // Simulate response after delay
+                setTimeout(() => {
+                    const thinkingMsg = document.getElementById('thinking-message');
+                    if (thinkingMsg) {
+                        thinkingMsg.innerHTML = `
+                            <div class="message-avatar">AI</div>
+                            <div class="message-content">
+                                <div class="message-bubble">
+                                    I've received your message: "${escapeHtml(message)}". 
+                                    In a real implementation, I would process this using the DSPy Agent System with appropriate tools and context management. 
+                                    (This is a mockup demonstration)
+                                </div>
+                                <div class="message-time">Just now</div>
+                            </div>
+                        `;
+                        messageCount++;
+                        updateContext();
+                    }
+                }, 2000);
+            }, 500);
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        function sendSuggestedPrompt(prompt) {
+            const input = document.getElementById('chatInput');
+            input.value = prompt;
+            sendMessage();
+        }
+        
+        function insertCommand(command) {
+            const input = document.getElementById('chatInput');
+            input.value = command + ' ';
+            input.focus();
+        }
+        
+        function runQuickAction(action) {
+            const actionMessages = {
+                'demo': 'Run the e-commerce demo',
+                'test': 'Run all test cases',
+                'weather': 'Get current weather',
+                'search': 'Search for products'
+            };
+            
+            if (actionMessages[action]) {
+                sendSuggestedPrompt(actionMessages[action]);
+            }
+        }
+        
+        function loadConversation(id) {
+            alert(`Loading conversation #${id} (mockup)`);
+        }
+        
+        function updateContext() {
+            // Update message count
+            const messageCountEl = document.querySelector('.context-value');
+            if (messageCountEl) {
+                messageCountEl.textContent = messageCount;
+            }
+            
+            // Update duration
+            const duration = Math.floor((Date.now() - startTime) / 60000);
+            const durationEls = document.querySelectorAll('.context-value');
+            if (durationEls[2]) {
+                durationEls[2].textContent = duration + 'm';
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Auto-resize textarea
+        const chatInput = document.getElementById('chatInput');
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+        
+        // Allow Enter key to send message
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -6,7 +6,7 @@ Each tool set can contain multiple tools and provides a way to manage and load
 collections of tools relevant to specific domains or functionalities.
 """
 from typing import List, Optional, Dict, Type, ClassVar, Any
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, PrivateAttr
 import dspy
 
 from .base_tool import ToolTestCase, BaseTool
@@ -36,7 +36,7 @@ class ToolSetConfig(BaseModel):
     """
     model_config = ConfigDict(frozen=True)  # Ensures the configuration is immutable after creation
     
-    name: str  # The unique name of the tool set (e.g., "treasure_hunt", "productivity")
+    name: str  # The unique name of the tool set (e.g., "agriculture", "ecommerce", "events")
     description: str  # A brief description of the tool set's purpose
     tool_classes: List[Type[BaseTool]]  # A list of direct references to the BaseTool subclasses included in this set
 
@@ -50,25 +50,34 @@ class ToolSet(BaseModel):
     and Extract agents.
     """
     config: ToolSetConfig  # The immutable configuration for this tool set
+    _initialized: bool = PrivateAttr(default=False)  # Track if initialization has been called
     
-    def load(self) -> None:
+    def initialize(self) -> None:
         """
-        Legacy method - registration is now handled explicitly via factory functions.
+        Initialize the tool set when it's registered.
         
-        This method is kept for backward compatibility but does nothing.
-        Use the factory functions in shared/tool_set_registry.py instead.
+        This method is called once when the tool set is registered with the ToolRegistry.
+        Subclasses can override this to perform one-time setup like:
+        - Loading test data into databases
+        - Setting up connections
+        - Initializing shared resources
+        
+        The base implementation sets the _initialized flag to prevent duplicate initialization.
         """
-        # No-op - explicit registration is now handled by factory functions
-        pass
+        if not self._initialized:
+            self._perform_initialization()
+            self._initialized = True
     
-    def get_loaded_tools(self) -> List[str]:
+    def _perform_initialization(self) -> None:
         """
-        Returns a list of names of the tools that are part of this tool set.
-
-        These are the tools that *should* be loaded into the registry when this
-        tool set is activated.
+        Protected method for actual initialization logic.
+        
+        Subclasses should override this method to implement their specific
+        initialization requirements. This method is only called once per tool set instance.
         """
-        return [tool_class.NAME for tool_class in self.config.tool_classes]
+        # Default implementation does nothing
+        # Subclasses override this for custom initialization
+        pass
     
     @classmethod
     def get_test_cases(cls) -> List[ToolSetTestCase]:
@@ -108,3 +117,27 @@ class ToolSet(BaseModel):
             Optional[Type[dspy.Signature]]: The Extract signature class, or None to use default behavior
         """
         return None
+    
+    def provides_instances(self) -> bool:
+        """
+        Indicate whether this tool set provides instances directly.
+        
+        Instance-based tool sets (like MCP) should override this to return True.
+        Class-based tool sets (default) return False.
+        
+        Returns:
+            bool: True if tool set provides instances, False if it provides classes
+        """
+        return False
+    
+    def get_tool_instances(self) -> List[BaseTool]:
+        """
+        Return tool instances for instance-based tool sets.
+        
+        This method is called when provides_instances() returns True.
+        Instance-based tool sets should override this to return their tool instances.
+        
+        Returns:
+            List[BaseTool]: List of tool instances, empty for class-based tool sets
+        """
+        return []
