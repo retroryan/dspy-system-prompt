@@ -87,7 +87,7 @@ class QueryRequest(BaseModel):
         description="Natural language query text"
     )
     max_iterations: int = Field(
-        default=5,
+        default=10,
         ge=1,
         le=10,
         description="Maximum React loop iterations"

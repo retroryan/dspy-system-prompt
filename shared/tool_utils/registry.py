@@ -1,4 +1,5 @@
 """Central registry for all tools adapted for agentic loop integration."""
+import logging
 import time
 from typing import Dict, Type, Callable, List, Optional, Any, TYPE_CHECKING
 import dspy
@@ -9,6 +10,8 @@ from .base_tool_sets import ToolSet, ToolSetTestCase
 # Avoid circular imports
 if TYPE_CHECKING:
     from agentic_loop.session import AgentSession
+
+logger = logging.getLogger(__name__)
 
 
 class ToolRegistry:
@@ -125,15 +128,25 @@ class ToolRegistry:
         Returns:
             The result of the tool execution
         """
+        # Truncate args for security in logs
+        args_str = str(kwargs)
+        if len(args_str) > 500:
+            args_str = args_str[:500] + "... (truncated)"
+        logger.info(f"Registry: Executing tool '{tool_name}' with {len(kwargs)} arguments")
+        logger.debug(f"Registry: Tool arguments: {args_str}")
+        
         tool = self.get_tool(tool_name)
         if not tool:
+            logger.error(f"Registry: Unknown tool: {tool_name}")
             return {"error": f"Unknown tool: {tool_name}"}
         
         # Add session to kwargs if tool accepts it
         if hasattr(tool, '_accepts_session') and tool._accepts_session and session:
+            logger.info(f"Registry: Adding session to tool '{tool_name}'")
             kwargs['session'] = session
         
         # Use validate_and_execute which handles session properly
+        logger.debug(f"Registry: Calling validate_and_execute for '{tool_name}'" )
         return tool.validate_and_execute(**kwargs)
     
     def register_tool_set(self, tool_set: ToolSet) -> None:

@@ -5,6 +5,7 @@ This module defines the foundational classes for creating tools that can be
 registered and used within the DSPy framework for multi-tool selection.
 It leverages Pydantic for robust argument validation and clear data modeling.
 """
+import logging
 from typing import List, ClassVar, Type, Any, Dict, Optional, TYPE_CHECKING
 from pydantic import BaseModel, Field
 from abc import ABC, abstractmethod
@@ -12,6 +13,8 @@ from abc import ABC, abstractmethod
 # Avoid circular imports
 if TYPE_CHECKING:
     from agentic_loop.session import AgentSession
+
+logger = logging.getLogger(__name__)
 
 
 class ToolArgument(BaseModel):
@@ -163,15 +166,36 @@ class BaseTool(BaseModel, ABC):
         # Extract session before validation (not part of args_model)
         session = kwargs.pop('session', None)
         
-        # Validate arguments using the Pydantic model
-        validated_args = self.args_model(**kwargs)
+        # Log what we're about to validate (truncate long args for security)
+        args_str = str(kwargs)
+        if len(args_str) > 500:
+            args_str = args_str[:500] + "... (truncated)"
+        logger.info(f"Tool '{self.name}': Validating arguments: {args_str}")
+        logger.info(f"Tool '{self.name}': Expected args model: {self.args_model.__name__ if hasattr(self.args_model, '__name__') else type(self.args_model).__name__}")
+        
+        try:
+            # Validate arguments using the Pydantic model
+            validated_args = self.args_model(**kwargs)
+            logger.info(f"Tool '{self.name}': Validation successful")
+        except Exception as e:
+            logger.error(
+                f"Tool '{self.name}': Validation failed\n"
+                f"Args received: {kwargs}\n"
+                f"Error: {e}\n"
+                f"Expected schema: {self.args_model.model_json_schema() if hasattr(self.args_model, 'model_json_schema') else 'N/A'}"
+            )
+            raise
         
         # Add session back if this tool accepts it
         execution_args = validated_args.model_dump()
         if self._accepts_session and session is not None:
             execution_args['session'] = session
+            logger.info(f"Tool '{self.name}': Added session to execution args")
             
-        # Execute the tool with the validated arguments
+        # Execute the tool with the validated arguments  
+        # Only log number of args at INFO level for security
+        logger.info(f"Tool '{self.name}': Executing with {len(execution_args)} arguments")
+        logger.debug(f"Tool '{self.name}': Execution args: {execution_args}")
         return self.execute(**execution_args)
 
 

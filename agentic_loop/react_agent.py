@@ -69,10 +69,14 @@ class ReactAgent(dspy.Module):
         tools_with_finish["finish"] = FinishTool()
         
         # Add tool descriptions to instructions
+        self.logger.info(f"Building tool list for agent with {len(tools_with_finish)} tools")
         for idx, tool in enumerate(tools_with_finish.values()):
             # Get argument details from the tool
             arg_details = tool.get_argument_details()
-            instr.append(f"({idx + 1}) Tool(name={tool.NAME}, desc={tool.description}, args={arg_details})")
+            tool_desc = f"({idx + 1}) Tool(name={tool.NAME}, desc={tool.description}, args={arg_details})"
+            instr.append(tool_desc)
+            # Log each tool so we can see what the agent has access to
+            self.logger.debug(f"Tool {idx + 1}: {tool.NAME} - {tool.description[:100]}")
 
         instr.append("When providing `next_tool_args`, the value inside the field must be in JSON format")
 

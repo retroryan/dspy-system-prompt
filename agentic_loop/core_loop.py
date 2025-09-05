@@ -93,6 +93,11 @@ def run_react_loop(
     logger.debug(f"Query: {user_query}")
     logger.debug(f"Context size: {len(context_prompt)} chars")
     
+    # Log available tools
+    available_tools = list(tool_registry.get_all_tools().keys())
+    logger.info(f"Available tools for this session: {available_tools}")
+    logger.info(f"Total tools available: {len(available_tools)}")
+    
     # Main agent loop
     while message_list.iteration_count < max_iterations:
         iteration_start = time.time()
@@ -116,6 +121,10 @@ def run_react_loop(
                 last_trajectory = traj
             if traj.tool_use:
                 tool_use = traj.tool_use
+        
+        # Log agent's thought process
+        if last_trajectory and last_trajectory.thought:
+            logger.info(f"Agent thought (iteration {iteration_num}): {last_trajectory.thought}")
         
         # Demo logging for React iteration
         if verbose:
@@ -144,7 +153,15 @@ def run_react_loop(
         tool_name = tool_use.tool_name
         tool_args = tool_use.tool_args
         
-        logger.debug(f"Tool args: {tool_args}")
+        # Log why this tool was selected
+        logger.info(f"Tool selected: '{tool_name}' (based on thought above)")
+        
+        # Truncate args for security in logs
+        args_str = str(tool_args)
+        if len(args_str) > 500:
+            args_str = args_str[:500] + "... (truncated)"
+        logger.info(f"Executing tool '{tool_name}' with {len(tool_args)} arguments")
+        logger.debug(f"Tool arguments: {args_str}")
         
         # Execute tool and add observation
         if tool_name in tool_registry.get_all_tools():
@@ -155,7 +172,14 @@ def run_react_loop(
                     session=session,
                     **tool_args
                 )
-                logger.debug(f"Tool result: {result}")
+                # Log tool observation (truncated for readability)
+                result_str = str(result)
+                if len(result_str) > 500:
+                    result_preview = result_str[:500] + "... (truncated)"
+                else:
+                    result_preview = result_str
+                logger.info(f"Tool observation from '{tool_name}': {result_preview}")
+                logger.debug(f"Full tool result: {result}")
                 
                 # Demo logging for tool result
                 if verbose:
@@ -173,8 +197,12 @@ def run_react_loop(
                 )
                 
             except Exception as e:
-                # Handle tool execution errors
-                logger.error(f"Tool execution error: {e}", exc_info=True)
+                # Handle tool execution errors with detailed logging
+                logger.error(
+                    f"Tool execution error for '{tool_name}': {e}\n"
+                    f"Error type: {type(e).__name__}",
+                    exc_info=True
+                )
                 message_list.add_tool_result(
                     tool_use_id=tool_use.tool_use_id,
                     tool_name=tool_name,
