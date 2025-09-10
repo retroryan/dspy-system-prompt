@@ -89,7 +89,7 @@ class QueryRequest(BaseModel):
     max_iterations: int = Field(
         default=10,
         ge=1,
-        le=10,
+        le=20,
         description="Maximum React loop iterations"
     )
 

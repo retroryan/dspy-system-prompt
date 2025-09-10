@@ -66,7 +66,7 @@ export const api = {
   },
 
   // Query Execution
-  async executeQuery(sessionId, query, maxIterations = 5) {
+  async executeQuery(sessionId, query, maxIterations = 10) {
     const response = await fetch(`${API_URL}/sessions/${sessionId}/query`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
