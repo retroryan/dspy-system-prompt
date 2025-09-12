@@ -18,43 +18,43 @@ Let's follow a user's question through the entire system to understand how every
 
 ```mermaid
 graph TD
-    User[User asks a question] 
-    
-    User --> Session[Session Manager]
-    
-    subgraph "Conversation Context"
-        Session --> Memory[Conversation Memory]
-        Memory --> Context[Previous Context]
+    subgraph "Layer 1: User searches for Real Estate"
+        User[User asks: 'Find modern homes with pools in San Francisco']
     end
     
-    subgraph "Thinking Process"
-        Context --> Brain[React Agent - The Thinker]
-        Brain --> Thought[Forms a Thought]
-        Thought --> Decision[Decides Which Tool to Use]
+    User --> Session
+    
+    subgraph "Layer 2: Conversation Context"
+        Session[Session Manager] --> Memory[Conversation Memory]
+        Memory --> Context[Previous Context & User Preferences]
     end
     
-    subgraph "Tool Discovery & Use"
-        Decision --> Registry[Tool Registry - The Organizer]
-        Registry --> Proxy[Tool Proxy - The Translator]
-        Proxy --> Client[MCP Client - The Messenger]
-        Client --> Server[MCP Server - The Tool Provider]
-        Server --> Work[Actual Work Gets Done]
-        Work --> Results[Results Come Back]
+    Context --> Brain
+    
+    subgraph "Layer 3: Thinking Process"
+        Brain[React Agent - The Thinker] --> Thought[Forms a Thought: 'Need to search properties']
+        Thought --> Decision[Decides to use property search tool]
     end
     
-    Results --> Observation[Observation Added to Memory]
-    Observation --> Brain
+    Decision --> Client
     
-    Brain --> CheckDone{Is Task Complete?}
+    subgraph "Layer 4: MCP Client"
+        Client[MCP Client - The Messenger] --> Server[MCP Server - Real Estate Database]
+        Server --> Work[Searches Properties]
+        Work --> Results[Returns Matching Homes]
+        Results --> Observation[Observation Added to Memory]
+    end
+    
+    Observation --> CheckDone{Is Task Complete?}
     CheckDone -->|Need More Info| Brain
-    CheckDone -->|Have Everything| Synthesizer[Extract Agent - The Synthesizer]
+    CheckDone -->|Have Everything| Synthesizer
     
-    subgraph "Answer Creation"
-        Synthesizer --> Review[Reviews All Information]
-        Review --> Compose[Composes Final Answer]
+    subgraph "Layer 5: Answer Creation"
+        Synthesizer[Extract Agent - The Synthesizer] --> Review[Reviews All Property Results]
+        Review --> Compose[Composes Final Answer with Property Details]
+        Compose --> Answer[Delivers List of Modern Homes with Pools]
     end
     
-    Compose --> Answer[Clear Answer to User]
     Answer --> User
 ```
 
