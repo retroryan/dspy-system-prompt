@@ -58,7 +58,7 @@ graph TD
     Answer --> User
 ```
 
-## The Cast of Characters
+## Core Modules
 
 ### The Session Manager
 Think of this as the project manager for your conversation. It keeps track of who you are, what you've talked about before, and manages the entire interaction from start to finish. When you ask a question, the Session Manager sets everything in motion and ensures all the pieces work together smoothly.
